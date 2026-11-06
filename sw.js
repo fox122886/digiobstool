@@ -1,5 +1,5 @@
 // 離線快取：改版時更新 VERSION，使用者下次開啟就會換成新版
-const VERSION = 'obs-2.0.0-alpha-5';
+const VERSION = 'obs-2.0.0-alpha-6';
 const FILES = [
   './', './index.html', './app.css', './manifest.webmanifest',
   './js/app.js', './js/model.js', './js/output.js', './js/store.js',

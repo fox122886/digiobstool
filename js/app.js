@@ -141,7 +141,7 @@ async function renderHome() {
       <input id="imp" type="file" accept="application/json,.json" hidden>
     </section>
     <footer class="foot">
-      <p>國立臺灣師範大學師資培育學院 張民杰教授 計畫。本工具改寫自 Miikka Turkkila 的
+      <p>國立臺灣師範大學師資培育學院 張民杰教授團隊。本工具改寫自 Miikka Turkkila 的
         <a href="https://github.com/MTurkkila/LOBS" target="_blank" rel="noopener">LOBS（Lesson OBServation app）</a>（CC BY-NC-SA 4.0），已修改介面、計時方式、資料保存與匯出功能。</p>
       <p>以<a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hant" target="_blank" rel="noopener">創用 CC 姓名標示-非商業性-相同方式分享 4.0</a> 釋出。版本 <span class="num">${APP_VERSION}</span></p>
       <p>觀課記錄常含學生資訊，建議以座號或代稱記錄，不寫全名。</p>
