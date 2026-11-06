@@ -313,9 +313,105 @@ function actionBar(s) {
   return `<button class="btn lg" data-act="pause">暫停</button>${undo}<button class="btn danger narrow" data-act="end">結束觀課</button>`;
 }
 
+// ---------- 手機：聊天式輸入介面（ATC、DTC） ----------
+const mqPhone = matchMedia('(max-width: 859px)');
+const chatMode = (s) => hasNotes(s) && mqPhone.matches;
+
+function topActions(s) {
+  if (s.status === 'ready') return '';
+  return `${isPaused(s)
+    ? '<button class="btn sm primary" data-act="resume">繼續</button>'
+    : '<button class="btn sm" data-act="pause">暫停</button>'}
+    <button class="btn sm danger" data-act="end">結束</button>`;
+}
+
+function chips(s) {
+  const open = openCodes(s);
+  return s.codes.map((c) => `<button type="button" class="chip ${open.has(c.id) ? 'on' : ''}" style="--c:${c.color}" data-act="tap" data-code="${c.id}"
+    ${isRunning(s) ? '' : 'disabled'}>${esc(c.label)}${c.kind === 'event' ? ' ＋' : ''}</button>`).join('');
+}
+
+function renderChat() {
+  const s = state.s;
+  const [label, cls] = stateLabel(s);
+  const ready = s.status === 'ready';
+  const canUndo = s.events.some((e) => e.type !== 'note');
+  app.innerHTML = `<div class="rec chat">
+    <header class="rec-top"><div class="in">
+      <button class="back" data-act="leave" aria-label="回首頁">‹</button>
+      <span class="clockbox"><span class="clock" id="clock" aria-label="課堂經過時間">${fmt(nowT())}</span>
+        <span class="wall num" id="wall" title="現在時刻">${clockHMS(Date.now())}</span></span>
+      <span class="state ${cls}" id="state">${label}</span>
+      <span class="top-acts" id="actions">${topActions(s)}</span>
+    </div></header>
+    <main class="rec-main" id="rec-main">
+      ${hasCodes(s) ? `<div class="grid-codes" id="codes-grid">${codeButtons(s)}</div>
+        <div class="row" style="justify-content:flex-end;margin-top:-6px"><button class="btn ghost sm" data-act="undo" ${canUndo && !ready ? '' : 'disabled'}>↶ 復原按鈕動作</button></div>` : ''}
+      <section class="feed" id="feed" aria-label="已送出的記錄">${feedHTML(s, { newestFirst: false })}</section>
+    </main>
+    <footer class="chatbar" id="chatbar">
+      ${ready ? `<button class="btn primary lg" data-act="start" style="width:100%">開始計時</button>` : `
+      ${hasCodes(s) ? `<div class="chips" id="chips" aria-label="代碼按鈕（打字時使用）">${chips(s)}</div>` : ''}
+      <div class="t0" id="t0"></div>
+      <div class="chat-row">
+        <button type="button" class="stamp" data-act="stamp" aria-label="插入現在時刻" title="插入現在時刻">時刻</button>
+        <textarea id="note-text" rows="1" enterkeyhint="send" placeholder="寫下你看到的…" aria-label="記錄內容"></textarea>
+        <button type="button" class="send" data-act="send" aria-label="送出">送出</button>
+      </div>`}
+    </footer>
+  </div>`;
+  watchChatbar();
+  restoreDraft();
+  growNote();
+  scrollFeedEnd();
+}
+
+// 讓輸入列貼在鍵盤上緣（iOS／Android 皆以 visualViewport 計算）
+function updateKeyboard() {
+  const vv = window.visualViewport;
+  const root = document.documentElement.style;
+  const kb = vv ? Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)) : 0;
+  root.setProperty('--kb', kb + 'px');
+  root.setProperty('--sab', kb > 0 ? '0px' : 'env(safe-area-inset-bottom, 0px)');
+}
+window.visualViewport?.addEventListener('resize', updateKeyboard);
+window.visualViewport?.addEventListener('scroll', updateKeyboard);
+
+let barObserver;
+function watchChatbar() {
+  updateKeyboard();
+  barObserver?.disconnect();
+  const bar = document.getElementById('chatbar');
+  if (!bar || !window.ResizeObserver) return;
+  barObserver = new ResizeObserver(() => document.documentElement.style.setProperty('--bar', bar.offsetHeight + 'px'));
+  barObserver.observe(bar);
+}
+
+function growNote() {
+  const ta = document.getElementById('note-text');
+  if (!ta || !app.querySelector('.rec.chat')) return;
+  ta.style.height = 'auto';
+  ta.style.height = Math.min(ta.scrollHeight + 2, 132) + 'px';
+}
+
+function scrollFeedEnd() {
+  if (!app.querySelector('.rec.chat')) return;
+  requestAnimationFrame(() => document.getElementById('feed')?.lastElementChild?.scrollIntoView({ block: 'nearest' }));
+}
+
+mqPhone.addEventListener?.('change', () => {
+  if (state.view === 'record' && state.s && hasNotes(state.s)) renderRecord();
+});
+
 function renderRecord() {
   state.view = 'record';
   const s = state.s;
+  if (chatMode(s)) {
+    renderChat();
+    if (s.status === 'recording') startTick();
+    if (isRunning(s)) keepAwake(true);
+    return;
+  }
   const [label, cls] = stateLabel(s);
   app.innerHTML = `<div class="rec">
     <header class="rec-top"><div class="in">
@@ -383,6 +479,12 @@ function refreshRecord() {
   const st = document.getElementById('state');
   st.textContent = label;
   st.className = 'state ' + cls;
+  if (app.querySelector('.rec.chat')) {
+    document.getElementById('actions').innerHTML = topActions(s);
+    refreshCodeViews();
+    updateClock();
+    return;
+  }
   document.getElementById('actions').innerHTML = actionBar(s);
   if (hasCodes(s)) {
     document.getElementById('codes-grid').innerHTML = codeButtons(s);
@@ -401,7 +503,21 @@ function refreshRecord() {
 
 function refreshFeed() {
   const f = document.getElementById('feed');
-  if (f) f.innerHTML = feedHTML(state.s);
+  const chat = !!app.querySelector('.rec.chat');
+  if (f) f.innerHTML = feedHTML(state.s, { newestFirst: !chat });
+  if (chat) scrollFeedEnd();
+}
+
+// 代碼按鈕的各個顯示處（大按鈕、打字時的小按鈕、復原鈕）一起更新
+function refreshCodeViews() {
+  const s = state.s;
+  if (!hasCodes(s)) return;
+  const grid = document.getElementById('codes-grid');
+  if (grid) grid.innerHTML = codeButtons(s);
+  const ch = document.getElementById('chips');
+  if (ch) ch.innerHTML = chips(s);
+  const undo = app.querySelector('[data-act="undo"]');
+  if (undo) undo.disabled = !s.events.some((e) => e.type !== 'note') || s.status === 'ready';
 }
 
 async function startClock() {
@@ -412,7 +528,8 @@ async function startClock() {
   await save();
   startTick();
   keepAwake(true);
-  refreshRecord();
+  if (app.querySelector('.rec.chat')) renderRecord();
+  else refreshRecord();
   if (s.mode === 'ATC' || (s.mode === 'DTC' && matchMedia('(pointer: fine)').matches)) document.getElementById('note-text')?.focus();
 }
 
@@ -476,10 +593,8 @@ function tapCode(id) {
   }
   vibrate();
   save();
-  document.getElementById('codes-grid').innerHTML = codeButtons(s);
-  if (c.kind === 'event') app.querySelector(`[data-code="${id}"]`)?.classList.add('flash');
-  const undo = app.querySelector('[data-act="undo"]');
-  if (undo) undo.disabled = false;
+  refreshCodeViews();
+  if (c.kind === 'event') app.querySelectorAll(`[data-code="${id}"]`).forEach((el) => el.classList.add('flash'));
 }
 
 function undoLast() {
@@ -493,8 +608,7 @@ function undoLast() {
   const c = codeOf(s, e.code);
   const what = { on: '開始', off: '結束', tap: '記一次' }[e.type];
   save();
-  document.getElementById('codes-grid').innerHTML = codeButtons(s);
-  app.querySelector('[data-act="undo"]').disabled = !s.events.some((x) => x.type !== 'note');
+  refreshCodeViews();
   toast(`已復原：${c?.label ?? ''} ${what}（${fmt(e.t)}）`);
 }
 
@@ -519,6 +633,7 @@ function onNoteInput(ta) {
   if (has && s.draft.t0 == null) setT0(nowT());
   if (!has && s.draft.t0 != null) setT0(null);
   s.draft.text = ta.value;
+  growNote();
   clearTimeout(draftTimer);
   draftTimer = setTimeout(() => save(), 600);
 }
@@ -532,11 +647,27 @@ function sendNote() {
   ta.value = '';
   s.draft = { text: '', t0: null };
   setT0(null);
+  growNote();
   clearTimeout(draftTimer);
   save();
   refreshFeed();
   ta.focus();
 }
+
+// 聊天式介面：點代碼小按鈕、時刻、送出時不讓輸入框失焦，鍵盤才不會收起來
+app.addEventListener('pointerdown', (e) => {
+  if (!app.querySelector('.rec.chat')) return;
+  if (e.target.closest('.chatbar button') && document.activeElement?.id === 'note-text') e.preventDefault();
+});
+app.addEventListener('focusin', (e) => {
+  if (e.target.id === 'note-text') app.querySelector('.rec.chat')?.classList.add('typing');
+});
+app.addEventListener('focusout', (e) => {
+  if (e.target.id !== 'note-text') return;
+  setTimeout(() => {
+    if (document.activeElement?.id !== 'note-text') app.querySelector('.rec.chat')?.classList.remove('typing');
+  }, 150);
+});
 function insertStamp() {
   const ta = document.getElementById('note-text');
   // 時鐘時刻：方便和其他觀課者、錄影檔對照
@@ -730,7 +861,10 @@ const actions = {
   pause: () => pause(),
   resume: () => resume(),
   end: () => endSession(),
-  tap: (el) => tapCode(el.dataset.code),
+  tap(el) {
+    tapCode(el.dataset.code);
+    if (el.classList.contains('chip')) document.getElementById('note-text')?.focus({ preventScroll: true });
+  },
   undo: () => undoLast(),
   send: () => sendNote(),
   stamp: () => insertStamp(),

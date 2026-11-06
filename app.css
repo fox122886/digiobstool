@@ -244,6 +244,52 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
   .rec-main.dtc .composer textarea { min-height: 64px; }
 }
 
+/* 手機聊天式介面（ATC、DTC） */
+.rec.chat .rec-top .in { gap: 10px; }
+.rec.chat .back { padding: 8px 6px 8px 0; font-size: 1.4rem; line-height: 1; }
+.clockbox { display: flex; flex-direction: column; line-height: 1; gap: 3px; }
+.clockbox .clock { font-size: 1.7rem; }
+.clockbox .wall { margin: 0; order: 0; font-size: .75rem; }
+.top-acts { margin-left: auto; display: flex; gap: 6px; }
+.top-acts .btn { min-height: 36px; padding: 4px 12px; }
+.rec.chat .rec-main { padding-bottom: calc(var(--bar, 120px) + var(--kb, 0px) + 16px); gap: 12px; }
+.rec.chat .grid-codes { gap: 8px; }
+.rec.chat .code { min-height: 64px; padding: 8px 10px; border-radius: 12px; }
+.rec.chat .code .name { font-size: 1rem; }
+.rec.chat .feed { gap: 6px; }
+.rec.chat .note { border-radius: 14px; }
+.chatbar {
+  position: fixed; left: 0; right: 0; bottom: var(--kb, 0px); z-index: 25;
+  background: var(--surface); border-top: 1px solid var(--line);
+  padding-top: 8px;
+  padding-left: max(12px, env(safe-area-inset-left, 0px)); padding-right: max(12px, env(safe-area-inset-right, 0px));
+  padding-bottom: calc(8px + var(--sab, env(safe-area-inset-bottom, 0px)));
+  display: flex; flex-direction: column; gap: 6px;
+}
+.chatbar .t0:empty { display: none; }
+.chatbar .t0 { padding-left: 4px; }
+.chat-row { display: flex; align-items: flex-end; gap: 8px; }
+.chat-row textarea {
+  flex: 1; min-width: 0; min-height: 44px; max-height: 132px; resize: none; overflow-y: auto;
+  border-radius: 22px; padding: 10px 16px; line-height: 1.45;
+}
+.chat-row .send, .chat-row .stamp {
+  flex: none; height: 44px; border-radius: 22px; border: 0; font-weight: 700; cursor: pointer; padding: 0 16px;
+}
+.chat-row .send { background: var(--accent); color: var(--accent-ink); }
+.chat-row .stamp { background: var(--sunken); color: var(--muted); padding: 0 12px; font-size: .85rem; }
+.chips { display: none; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; -webkit-overflow-scrolling: touch; }
+.chips::-webkit-scrollbar { display: none; }
+.rec.chat.typing .chips { display: flex; }
+.chip {
+  flex: none; min-height: 36px; padding: 4px 14px; border-radius: 999px; cursor: pointer;
+  border: 2px solid var(--c); background: color-mix(in srgb, var(--c) 12%, var(--surface)); color: var(--ink);
+  font-weight: 700; font-size: .9rem; white-space: nowrap; touch-action: manipulation;
+}
+.chip.on { background: var(--c); color: #fff; }
+.chip[disabled] { opacity: .45; }
+.chip.flash { animation: flash .35s; }
+
 /* ATC composer */
 .composer { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 12px; display: flex; flex-direction: column; gap: 8px; }
 .composer textarea { min-height: 96px; background: var(--paper); }
@@ -295,3 +341,4 @@ details > summary { cursor: pointer; font-weight: 700; padding: 4px 0; }
   .clock { font-size: 1.9rem; }
   .rec-top .title { display: none; }
 }
+body:has(.rec.chat) #toast { bottom: calc(var(--bar, 120px) + var(--kb, 0px) + 12px); }
