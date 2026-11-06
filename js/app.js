@@ -4,6 +4,7 @@ import {
   codeOf, openCodes, segments, stats, notes, totalSec, displayTitle, sampleSession, APP_VERSION, wallTime, clockHMS,
 } from './model.js';
 import { timelineSVG, download, timelinePNG, xlsxBlob, jsonBlob, names } from './output.js';
+import * as gd from './gdrive.js';
 
 const app = document.getElementById('app');
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -51,12 +52,94 @@ function ask({ title, body = '', ok = '確定', cancel = '取消', danger = fals
 
 // 依序寫入，避免兩次儲存互相覆蓋
 let saveChain = Promise.resolve();
-function save(s = state.s) {
+let resyncTimer;
+function save(s = state.s, { touch = true } = {}) {
   if (!s || s.sample) return saveChain;
-  s.updatedAt = Date.now();
+  if (touch) {
+    s.updatedAt = Date.now();
+    // 結果頁修改後：已登入且權杖有效時，自動更新雲端上的版本
+    if (state.view === 'result' && s === state.s && s.status === 'ended') {
+      clearTimeout(resyncTimer);
+      resyncTimer = setTimeout(() => {
+        if (state.account && gd.hasToken() && s.drive?.syncedAt) syncNow(s, { interactive: false });
+        else refreshCloud();
+      }, 2500);
+    }
+  }
   const snap = structuredClone(s);
   saveChain = saveChain.then(() => store.put(snap)).catch((err) => toast('儲存失敗：' + (err?.message || err), 5000));
   return saveChain;
+}
+
+// ---------- Google 雲端硬碟 ----------
+function syncTime(ms) {
+  return new Date(ms).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
+}
+
+function cloudRow(unsynced) {
+  if (!gd.available()) return '';
+  const a = state.account;
+  if (!a) {
+    return `<div class="panel cloud-row"><div class="grow"><b>存到自己的 Google 雲端硬碟</b><br>
+      <span class="small muted">登入後，結束觀課時會自動存一份試算表到你的雲端硬碟，換裝置也找得到。</span></div>
+      <button class="btn sm primary" data-act="g-signin">連結 Google</button></div>`;
+  }
+  return `<div class="panel cloud-row"><div class="grow"><span class="small muted">已連結 Google 雲端硬碟</span><br><b class="email">${esc(a.email)}</b></div>
+    <span class="row">
+      ${unsynced ? `<button class="btn sm primary" data-act="g-sync-all">同步 ${unsynced} 場觀課</button>` : ''}
+      ${a.folderUrl ? `<a class="btn sm" href="${esc(a.folderUrl)}" target="_blank" rel="noopener">開啟資料夾</a>` : ''}
+      <button class="btn sm ghost" data-act="g-signout">登出</button>
+    </span></div>`;
+}
+
+function cloudPanel(s) {
+  if (s.sample || !gd.available()) return '';
+  const a = state.account;
+  let body;
+  if (state.syncing === s.id) {
+    body = `<p class="muted">正在存到雲端硬碟…</p>`;
+  } else if (!a) {
+    body = `<p class="hint">登入 Google 後，可以把這場觀課存一份到你自己的雲端硬碟（Google 試算表＋備份檔）。記錄只會存到你的帳號，不會經過其他伺服器。</p>
+      <div class="row"><button class="btn primary sm" data-act="g-sync">登入並存到雲端硬碟</button></div>`;
+  } else if (!gd.needsSync(s)) {
+    body = `<p>已存到雲端硬碟 <span class="hint num">（${syncTime(s.drive.syncedAt)}）</span></p>
+      <div class="row"><a class="btn sm primary" href="${esc(s.drive.sheetUrl)}" target="_blank" rel="noopener">開啟試算表</a>
+      <a class="btn sm" href="${esc(s.drive.folderUrl)}" target="_blank" rel="noopener">開啟資料夾</a></div>`;
+  } else {
+    body = `<p class="hint">${s.drive?.syncedAt ? '記錄有修改，雲端硬碟上的還是修改前的版本。' : '這場觀課還沒存到雲端硬碟。'}</p>
+      <div class="row"><button class="btn primary sm" data-act="g-sync">${s.drive?.syncedAt ? '更新雲端硬碟上的版本' : '存到雲端硬碟'}</button></div>`;
+  }
+  if (state.cloudErr) body += `<p class="err">${esc(state.cloudErr)}</p>`;
+  return `<section class="panel" id="cloud"><header><h2>Google 雲端硬碟</h2>${a ? `<span class="hint">${esc(a.email)}</span>` : ''}</header>${body}</section>`;
+}
+
+function refreshCloud() {
+  const el = document.getElementById('cloud');
+  if (el && state.view === 'result' && state.s) el.outerHTML = cloudPanel(state.s) || '<span id="cloud"></span>';
+}
+
+async function syncNow(s, { interactive = true } = {}) {
+  if (!gd.available() || !s || s.sample) return;
+  if (!navigator.onLine) { state.cloudErr = '目前沒有網路，連線後再按一次即可。'; refreshCloud(); return; }
+  state.cloudErr = null;
+  try {
+    if (!state.account) {
+      state.syncing = s.id; refreshCloud();
+      state.account = await gd.signIn();
+      state.account.folderUrl = (await store.getSetting('googleFolder'))?.url;
+    } else if (!(await gd.getToken({ interactive }))) {
+      return;
+    }
+    state.syncing = s.id; refreshCloud();
+    s.drive = await gd.syncSession(s);
+    await save(s, { touch: false });
+    if (interactive) toast('已存到你的雲端硬碟');
+  } catch (e) {
+    state.cloudErr = e.message || String(e);
+  } finally {
+    state.syncing = null;
+    refreshCloud();
+  }
 }
 
 const vibrate = (ms = 12) => { try { navigator.vibrate?.(ms); } catch (e) { /* 不支援 */ } };
@@ -100,7 +183,7 @@ async function renderHome() {
     const dur = live ? (s.status === 'ready' ? '未開始' : '進行中') : fmt(totalSec(s));
     return `<li><button class="item" data-act="open" data-id="${esc(s.id)}">
       <span class="badge ${live ? 'live' : ''}">${s.mode}</span>
-      <span class="main"><span class="t">${esc(displayTitle(s))}</span><br><span class="sub"><span class="num">${esc(when)}</span> · ${count}</span></span>
+      <span class="main"><span class="t">${esc(displayTitle(s))}</span><br><span class="sub"><span class="num">${esc(when)}</span> · ${count}${s.drive?.syncedAt && !gd.needsSync(s) ? ' · <span class="cloud-ok">已存雲端</span>' : ''}</span></span>
       <span class="dur num">${dur}</span></button></li>`;
   };
 
@@ -110,6 +193,7 @@ async function renderHome() {
       <h1>數位觀課工具</h1>
       <p class="muted">可離線使用，每個動作都即時存在這台裝置上。<a class="guide-link" href="guide.html">操作指引 →</a></p>
     </div>
+    ${cloudRow(state.account ? done.filter(gd.needsSync).length : 0)}
     ${state.persistent ? '' : `<div class="panel" style="border-color:var(--warn)"><p><b>這個瀏覽器無法長期保存資料</b>（可能是無痕模式）。記錄只會留到關閉頁面為止，結束後請立即匯出。</p></div>`}
     ${unfinished.map((s) => `<div class="panel resume"><div class="grow"><b>有一場觀課尚未結束</b><br>
       <span class="small muted">${esc(s.mode)} · ${esc(displayTitle(s))}</span></div>
@@ -146,7 +230,7 @@ async function renderHome() {
       <p>國立臺灣師範大學師資培育學院 張民杰教授團隊。本工具改寫自 Miikka Turkkila 的
         <a href="https://github.com/MTurkkila/LOBS" target="_blank" rel="noopener">LOBS（Lesson OBServation app）</a>（CC BY-NC-SA 4.0），已修改介面、計時方式、資料保存與匯出功能。</p>
       <p>以<a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hant" target="_blank" rel="noopener">創用 CC 姓名標示-非商業性-相同方式分享 4.0</a> 釋出。版本 <span class="num">${APP_VERSION}</span></p>
-      <p>觀課記錄常含學生資訊，建議以座號或代稱記錄，不寫全名。</p>
+      <p>觀課記錄常含學生資訊，建議以座號或代稱記錄，不寫全名。<a href="privacy.html">隱私權政策</a></p>
     </footer>
   </div>`;
 }
@@ -575,6 +659,7 @@ async function endSession() {
   stopTick();
   keepAwake(false);
   renderResult();
+  if (state.account && gd.hasToken()) syncNow(s, { interactive: false });
 }
 
 function tapCode(id) {
@@ -693,6 +778,7 @@ function renderTimeline() {
 }
 
 function renderResult() {
+  if (state.view !== 'result') state.cloudErr = null;
   state.view = 'result';
   stopTick();
   const s = state.s;
@@ -741,13 +827,13 @@ function renderResult() {
     <section class="panel"><header><h2>時間軸</h2><span class="hint">${tlHint}</span></header>
       <div class="tl" id="tl"></div></section>
     ${body}
+    ${cloudPanel(s)}
     <section class="panel"><header><h2>匯出</h2><span class="hint">檔名只用英數字，任何系統都能正常開啟</span></header>
       <div class="exports">
         <button class="btn exp" data-act="exp-xlsx"><span>Excel 試算表</span><span class="fn">${n.xlsx}</span></button>
         <button class="btn exp" data-act="exp-png"><span>時間軸圖片</span><span class="fn">${n.png}</span></button>
         <button class="btn exp" data-act="exp-json"><span>備份檔（可匯入其他裝置）</span><span class="fn">${n.json}</span></button>
       </div>
-      <p class="hint">登入 Google、自動存到個人雲端硬碟的功能會在下一階段加入。</p>
     </section>
     <section class="panel"><details>
       <summary>觀課資訊</summary>
@@ -823,6 +909,33 @@ const actions = {
     s.status === 'ended' ? renderResult() : renderRecord();
   },
   sample(el) { state.s = sampleSession(el.dataset.mode); renderResult(); },
+  async 'g-signin'() {
+    try {
+      state.account = await gd.signIn();
+      state.account.folderUrl = (await store.getSetting('googleFolder'))?.url;
+      toast(`已連結 ${state.account.email}`);
+    } catch (e) { toast(e.message || String(e), 6000); }
+    renderHome();
+  },
+  async 'g-signout'() {
+    if (!(await ask({ title: '登出 Google？', body: '登出後不會再自動存到雲端硬碟；已經存好的檔案仍會留在你的雲端硬碟。', ok: '登出' }))) return;
+    await gd.signOut();
+    state.account = null;
+    renderHome();
+  },
+  'g-sync'() { syncNow(state.s, { interactive: true }); },
+  async 'g-sync-all'(el) {
+    try { await gd.getToken({ interactive: true }); } catch (e) { toast(e.message, 6000); return; }
+    const list = (await store.all()).filter(gd.needsSync);
+    el.disabled = true;
+    let n = 0;
+    for (const s of list) {
+      el.textContent = `同步中 ${n + 1} / ${list.length}`;
+      try { s.drive = await gd.syncSession(s); await save(s, { touch: false }); n++; } catch (e) { toast('同步中斷：' + e.message, 6000); break; }
+    }
+    if (n) toast(`已同步 ${n} 場觀課`);
+    renderHome();
+  },
   async discard(el) {
     const s = await store.get(el.dataset.id);
     const has = s && s.events.length > 0;
@@ -904,7 +1017,7 @@ const actions = {
   'exp-png': () => exportFile('png'),
   'exp-json': () => exportFile('json'),
   async 'delete-session'() {
-    if (!(await ask({ title: '刪除這場觀課？', body: '刪除後無法復原。如果還需要，請先匯出備份檔。', ok: '刪除', danger: true }))) return;
+    if (!(await ask({ title: '刪除這場觀課？', body: `刪除後無法復原。如果還需要，請先匯出備份檔。${state.s.drive?.syncedAt ? '已存到雲端硬碟的檔案不會一起刪除。' : ''}`, ok: '刪除', danger: true }))) return;
     await store.del(state.s.id);
     toast('已刪除');
     renderHome();
@@ -1001,6 +1114,11 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => { 
 // ---------- 啟動 ----------
 (async () => {
   state.persistent = await store.ready();
+  if (gd.available()) {
+    state.account = await gd.account();
+    if (state.account) state.account.folderUrl = (await store.getSetting('googleFolder'))?.url;
+    if (navigator.onLine) gd.loadGis().catch(() => {}); // 先載入，按登入時視窗才不會被擋
+  }
   await renderHome();
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     const hadController = !!navigator.serviceWorker.controller;

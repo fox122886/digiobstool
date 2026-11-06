@@ -63,7 +63,7 @@
       <li><a href="#utc">UTC 代碼計時</a></li>
       <li><a href="#atc">ATC 軼事記錄</a></li>
       <li><a href="#dtc">DTC 質量雙元</a></li>
-      <li><a href="#result">結果與匯出</a></li>
+      <li><a href="#result">結果、匯出與雲端</a></li>
       <li><a href="#codes">代碼分類範例</a></li>
       <li><a href="#keys">鍵盤快捷鍵</a></li>
       <li><a href="#faq">常見問題</a></li>
@@ -173,7 +173,7 @@
     <figcaption>左：手機打字中，輸入列上方是代碼小按鈕。右：電腦版，左按鈕、右文字。</figcaption>
   </figure>
 
-  <h2 id="result">結果與匯出</h2>
+  <h2 id="result">結果、匯出與雲端</h2>
   <h3>時間軸</h3>
   <p>色帶是持續行為，菱形是單次標記；ATC、DTC 最下列的圓點是文字記錄的送出時間，前方淡色線段是撰寫期間，數字對應記錄編號。在電腦上把滑鼠移到色帶或圓點上可看到詳細時間與內容。</p>
   <figure>
@@ -204,7 +204,16 @@
       <tr><td>備份檔</td><td>JSON 格式的完整記錄。可在另一台裝置的首頁「匯入備份檔」，繼續查看與匯出。首頁的「匯出全部備份」可一次備份所有觀課。</td></tr>
     </tbody>
   </table>
-  <div class="note-box">登入 Google、自動存到個人雲端硬碟的功能將在下一階段加入。在那之前，請以匯出檔案保存記錄。</div>
+  <h3 id="cloud">存到 Google 雲端硬碟</h3>
+  <ul>
+    <li>在首頁按「連結 Google」，選擇你的帳號並同意授權。本工具只能存取它自己建立的檔案，看不到你雲端硬碟裡的其他東西。</li>
+    <li>連結後，你的雲端硬碟會多一個「數位觀課記錄」資料夾。每場觀課存一份 Google 試算表（內容與 Excel 匯出相同），加上一份 .json 備份檔。</li>
+    <li>結束觀課時會自動存一份；若登入已超過約一小時，結果頁會出現「存到雲端硬碟」按鈕，按一下即可。</li>
+    <li>在結果頁修改記錄後，雲端上的版本會自動更新，或按「更新雲端硬碟上的版本」。</li>
+    <li>首頁的「同步 N 場觀課」可一次補存所有還沒存到雲端的觀課。</li>
+    <li>試算表可以直接從雲端硬碟分享給授課教師或議課夥伴。</li>
+  </ul>
+  <div class="note-box">雲端同步只在正式網址提供。記錄只會存到你自己的帳號，開發團隊看不到。詳見<a href="privacy.html">隱私權政策</a>。</div>
 
   <h2 id="codes">代碼分類範例</h2>
   <p>以下分類取自原版使用說明與「100 道焦點問題」。標示「範本」的可在 UTC、DTC 設定頁的「套用」選單直接載入，再依需要修改名稱。</p>
@@ -274,14 +283,14 @@
   <h3>手機鎖螢幕或切到其他 App，時間會不準嗎？</h3>
   <p>不會。課堂時間是以實際時鐘計算，回到畫面時會顯示正確時間。記錄中工具會盡量讓螢幕保持開啟。</p>
   <h3>想在另一台裝置看記錄？</h3>
-  <p>在原裝置的結果頁按「備份檔」，或在首頁按「匯出全部備份」，再到另一台裝置的首頁「匯入備份檔」。</p>
+  <p>兩台裝置都連結同一個 Google 帳號後，可以在雲端硬碟的「數位觀課記錄」資料夾直接開啟試算表。要在另一台裝置繼續編修，把對應的 .json 備份檔下載後，到首頁「匯入備份檔」即可。沒有連結 Google 時，請在原裝置的結果頁按「備份檔」或首頁「匯出全部備份」。</p>
   <h3>畫面還是舊的版本？</h3>
   <p>為了能離線使用，工具會把程式存在裝置上。發布新版後，開啟時會在背景下載，並在回到首頁時自動換成新版；若仍看到舊版，關閉頁面後重新開啟即可。</p>
   <h3>可以給其他教師使用嗎？</h3>
   <p>可以，分享網址 <span class="url">https://fox122886.github.io/digiobstool/</span> 即可。每位使用者的記錄只存在自己的裝置上，彼此不會看到。</p>
 
   <div class="foot2">
-    <p>國立臺灣師範大學師資培育學院 張民杰教授團隊。本工具改寫自 Miikka Turkkila 的 <a href="https://github.com/MTurkkila/LOBS" target="_blank" rel="noopener">LOBS（Lesson OBServation app）</a>，以<a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hant" target="_blank" rel="noopener">創用 CC 姓名標示-非商業性-相同方式分享 4.0</a> 釋出。</p>
+    <p>國立臺灣師範大學師資培育學院 張民杰教授團隊。本工具改寫自 Miikka Turkkila 的 <a href="https://github.com/MTurkkila/LOBS" target="_blank" rel="noopener">LOBS（Lesson OBServation app）</a>，以<a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hant" target="_blank" rel="noopener">創用 CC 姓名標示-非商業性-相同方式分享 4.0</a> 釋出。<a href="privacy.html">隱私權政策</a></p>
     <p>問題與建議：<span class="num">ntnutdo@gmail.com</span>　電話：<span class="num">02-7749-1228</span></p>
   </div>
 </main>

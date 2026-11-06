@@ -5,6 +5,7 @@
 
 - **開始使用**：<https://fox122886.github.io/digiobstool/>
 - **操作指引**：<https://fox122886.github.io/digiobstool/guide.html>
+- **隱私權政策**：<https://fox122886.github.io/digiobstool/privacy.html>
 
 手機可在瀏覽器選單選「加到主畫面」（iPhone 為 Safari「分享 → 加入主畫面」），安裝後可離線開啟。
 
@@ -28,6 +29,8 @@ js/app.js              畫面與操作
 js/model.js            資料模型、計時、統計（純函式）
 js/output.js           時間軸圖、Excel／PNG／JSON 匯出
 js/store.js            IndexedDB 本機資料庫
+js/gdrive.js           Google 雲端硬碟同步（drive.file 權限）
+privacy.html           隱私權政策
 vendor/xlsx.full.min.js SheetJS 0.18.5（Apache 2.0）
 icons/                 APP 圖示
 ```
@@ -50,6 +53,13 @@ python -m http.server 8000
 3. 幾分鐘後網址為 `https://<帳號>.github.io/observation-tools/`。
 
 之後每次修改：更新檔案 → 把 `sw.js` 的 `VERSION` 改成新字串 → 推上 GitHub。使用者下次開啟就會換成新版。
+
+## Google 雲端硬碟同步
+
+- 使用 Google Identity Services 在瀏覽器取得權杖，權限只有 `drive.file`，APP 只能存取自己建立的檔案。
+- OAuth 用戶端 ID 寫在 `js/gdrive.js` 的 `CLIENT_ID`；已授權的 JavaScript 來源需包含部署網域。
+- 每場觀課存成一份 Google 試算表與一份 JSON，放在使用者雲端硬碟的「數位觀課記錄」資料夾。
+- 換網域或移轉 Google Cloud 專案時，更新 `CLIENT_ID` 與 `ALLOWED_HOSTS` 即可。
 
 ## 資料格式
 

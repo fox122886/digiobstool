@@ -348,3 +348,7 @@ details > summary { cursor: pointer; font-weight: 700; padding: 4px 0; }
   .rec-top .title { display: none; }
 }
 body:has(.rec.chat) #toast { bottom: calc(var(--bar, 120px) + var(--kb, 0px) + 12px); }
+.cloud-row { flex-direction: row; align-items: center; flex-wrap: wrap; gap: 12px; }
+.cloud-row .grow { flex: 1; min-width: 200px; }
+.cloud-row .email { word-break: break-all; }
+.cloud-ok { color: var(--accent); font-weight: 600; }
