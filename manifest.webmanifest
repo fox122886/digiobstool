@@ -1,0 +1,17 @@
+{
+  "name": "數位觀課工具",
+  "short_name": "觀課工具",
+  "description": "UTC、ATC 數位觀課記錄，可離線使用、自動保存。",
+  "lang": "zh-Hant-TW",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#F3F6F5",
+  "theme_color": "#0F6E66",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
