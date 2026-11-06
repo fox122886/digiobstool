@@ -95,6 +95,9 @@ p { margin: 0; }
 .brand { display: flex; flex-direction: column; gap: 4px; padding-top: 8px; }
 .brand .eyebrow { font-size: .8rem; letter-spacing: .08em; color: var(--accent); font-weight: 700; }
 .brand h1 { font-size: 1.7rem; }
+.guide-link { color: var(--accent); font-weight: 700; text-decoration: none; margin-left: 8px; white-space: nowrap; }
+.guide-link:hover { text-decoration: underline; }
+.hint a { color: var(--accent); }
 .modes { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
 .mode {
   text-align: left; border: 1px solid var(--line); background: var(--surface); border-radius: var(--r);
@@ -144,6 +147,7 @@ p { margin: 0; }
 .item .main { flex: 1; min-width: 0; }
 .item .t { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .item .sub { font-size: .85rem; color: var(--muted); }
+.item .dur { flex: none; font-size: .9rem; font-weight: 700; color: var(--ink); }
 .badge { display: inline-block; font-family: var(--font-num); font-size: .75rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); letter-spacing: .04em; }
 .badge.live { background: var(--rec-soft); color: var(--rec); }
 .badge.sample { background: var(--warn-soft); color: var(--warn); }
@@ -298,7 +302,9 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .t0 b { color: var(--ink); font-family: var(--font-num); }
 
 .feed { display: flex; flex-direction: column; gap: 8px; }
-.note { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; }
+.note { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; }
+.note .when > span:first-child { padding-right: 104px; }
+.note .acts { position: absolute; top: 4px; right: 6px; }
 .note .no { font-family: var(--font-num); font-weight: 700; color: var(--accent); grid-row: span 2; }
 .note .when { font-size: .8rem; color: var(--muted); font-family: var(--font-num); display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .note .txt { white-space: pre-wrap; word-break: break-word; }

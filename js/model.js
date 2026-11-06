@@ -17,6 +17,19 @@ export const PRESETS = [
     ['學生提問', 'duration'], ['小組討論', 'duration'], ['個別練習', 'duration']] },
   { id: 'management', name: '範例：班級經營', codes: [
     ['教學活動', 'duration'], ['轉換時間', 'duration'], ['秩序提醒', 'event'], ['正向回饋', 'event']] },
+  // 以下取自原 UTC 使用說明與「100道焦點問題」的分類參考
+  { id: 'fiac', name: '佛蘭德斯互動分析（FIAC）', exclusive: true, codes: [
+    ['接納感受', 'duration'], ['稱讚鼓勵', 'duration'], ['採納學生想法', 'duration'], ['教師提問', 'duration'], ['講述', 'duration'],
+    ['給予指示', 'duration'], ['批評或維護權威', 'duration'], ['學生被動發言', 'duration'], ['學生主動發言', 'duration'], ['停頓、沉默或混亂', 'duration']] },
+  { id: 'student', name: '教學情境＋個別學生行為', codes: [
+    ['GI-1 單向教學', 'duration'], ['GI-2 雙向互動', 'duration'], ['GA 分組活動', 'duration'], ['IL 個別學習', 'duration'],
+    ['I 積極主動', 'duration'], ['E 被動努力', 'duration'], ['N 不專心', 'duration'], ['D 干擾行為', 'duration']] },
+  { id: 'two-students', name: '兩位個別學生行為', codes: [
+    ['A生 I 積極主動', 'duration'], ['A生 E 被動努力', 'duration'], ['A生 N 不專心', 'duration'], ['A生 D 干擾', 'duration'],
+    ['B生 I 積極主動', 'duration'], ['B生 E 被動努力', 'duration'], ['B生 N 不專心', 'duration'], ['B生 D 干擾', 'duration']] },
+  { id: 'group-roles', name: '小組討論：依職務的發言', codes: [
+    ['組長發言', 'duration'], ['記錄發言', 'duration'], ['報告發言', 'duration'], ['提問員發言', 'duration'],
+    ['靜默', 'duration'], ['離題', 'duration'], ['正題', 'duration']] },
   { id: 'blank', name: '空白（兩個按鈕）', codes: [['代碼 1', 'duration'], ['代碼 2', 'duration']] },
 ];
 

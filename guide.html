@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>數位觀課工具操作指引</title>
+<meta name="theme-color" content="#0F6E66">
+<meta name="description" content="UTC、ATC、DTC 數位觀課工具 2.0 的操作說明、代碼分類範例與常見問題。">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="app.css">
+<style>
+  /* 指引頁：單欄閱讀版面，手機截圖置中、電腦截圖滿版 */
+  .g { max-width: 760px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 16px 64px; }
+  .g header.top { display: flex; flex-direction: column; gap: 6px; padding-block: 8px 20px; border-bottom: 1px solid var(--line); }
+  .g header.top .eyebrow { font-size: .8rem; letter-spacing: .08em; color: var(--accent); font-weight: 700; }
+  .g header.top h1 { font-size: 1.7rem; }
+  .g header.top .row { margin-top: 8px; }
+  .g h2 { font-size: 1.3rem; margin: 40px 0 12px; padding-top: 8px; scroll-margin-top: 16px; }
+  .g h3 { font-size: 1.05rem; margin: 24px 0 8px; scroll-margin-top: 16px; }
+  .g p, .g li { line-height: 1.75; }
+  .g p + p { margin-top: 10px; }
+  .g ul, .g ol { padding-left: 1.4em; margin: 8px 0; }
+  .g a { color: var(--accent); }
+  .toc { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 18px; margin-top: 20px; }
+  .toc ol { columns: 2; column-gap: 24px; margin: 6px 0 0; }
+  @media (max-width: 520px) { .toc ol { columns: 1; } }
+  .note-box { background: var(--accent-soft); border-radius: 10px; padding: 12px 16px; margin: 12px 0; }
+  .warn-box { background: var(--warn-soft); border-radius: 10px; padding: 12px 16px; margin: 12px 0; }
+  figure { margin: 16px 0; }
+  figure img { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+  figure.phone img { max-width: 300px; margin: 0 auto; border-radius: 20px; }
+  figure.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  figure.pair img { max-width: 100%; border-radius: 20px; }
+  @media (max-width: 520px) { figure.pair { grid-template-columns: 1fr; } figure.pair img { max-width: 300px; margin: 0 auto; } }
+  figcaption { font-size: .85rem; color: var(--muted); text-align: center; margin-top: 8px; grid-column: 1 / -1; }
+  .tools { display: grid; gap: 10px; margin: 12px 0; }
+  .tools div { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+  .tools b.tag { font-family: var(--font-num); color: var(--accent); margin-right: 8px; }
+  .g table { margin: 8px 0; font-size: .9rem; }
+  .g td, .g th { white-space: normal; vertical-align: top; }
+  .g td:first-child { white-space: nowrap; font-weight: 600; }
+  kbd { font-family: var(--font-num); font-size: .85em; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; padding: 1px 6px; background: var(--surface); white-space: nowrap; }
+  .url { font-family: var(--font-num); word-break: break-all; }
+  .g h3 .badge { margin-left: 8px; vertical-align: middle; }
+  .foot2 { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--line); font-size: .85rem; color: var(--muted); }
+</style>
+</head>
+<body>
+<main class="g">
+  <header class="top">
+    <span class="eyebrow">國立臺灣師範大學 · 數位觀課工具 2.0</span>
+    <h1>操作指引</h1>
+    <p class="muted">UTC 通用時間線標記、ATC 軼事記錄時間線標記、DTC 質量雙元時間線標記</p>
+    <div class="row"><a class="btn primary sm" href="./">開啟數位觀課工具</a><span class="small muted url">fox122886.github.io/digiobstool</span></div>
+  </header>
+
+  <nav class="toc" aria-label="目錄">
+    <b>目錄</b>
+    <ol>
+      <li><a href="#before">開始之前</a></li>
+      <li><a href="#choose">三種工具怎麼選</a></li>
+      <li><a href="#flow">共同流程</a></li>
+      <li><a href="#utc">UTC 代碼計時</a></li>
+      <li><a href="#atc">ATC 軼事記錄</a></li>
+      <li><a href="#dtc">DTC 質量雙元</a></li>
+      <li><a href="#result">結果與匯出</a></li>
+      <li><a href="#codes">代碼分類範例</a></li>
+      <li><a href="#keys">鍵盤快捷鍵</a></li>
+      <li><a href="#faq">常見問題</a></li>
+    </ol>
+  </nav>
+
+  <h2 id="before">開始之前</h2>
+  <ul>
+    <li><b>先知會被觀察者並取得同意。</b>在課堂、會議等場合使用本工具記錄前，請先告知授課教師與學生。</li>
+    <li><b>學生以座號或代稱記錄</b>，不寫全名。觀課記錄常含學生資訊，屬個人資料。</li>
+    <li><b>記錄存在你的裝置上。</b>每按一次按鈕、每送出一段文字都會立即保存，誤按重新整理或手機切到背景也不會遺失。但換手機、清除瀏覽器資料就會不見，重要的記錄請匯出保存。</li>
+    <li><b>不要用無痕模式。</b>無痕模式關閉後資料會被清除，首頁也會出現提醒。</li>
+    <li><b>建議安裝到主畫面。</b>安裝後可以離線開啟，像 APP 一樣使用：
+      <ul>
+        <li>Android（Chrome）：開啟網址 → 右上角選單 →「安裝應用程式」或「加到主畫面」。</li>
+        <li>iPhone／iPad（Safari）：開啟網址 → 下方「分享」→「加入主畫面」。</li>
+        <li>電腦（Chrome、Edge）：網址列右側的「安裝」圖示。</li>
+      </ul>
+    </li>
+  </ul>
+
+  <h2 id="choose">三種工具怎麼選</h2>
+  <div class="tools">
+    <div><b class="tag">UTC</b><b>通用時間線標記</b><br>依觀察焦點把課堂中看到、聽到的事實分類，用按鈕標記起訖時間。適合想知道「各種行為占多少時間、出現幾次」，例如教師講述與學生討論的比例。</div>
+    <div><b class="tag">ATC</b><b>軼事記錄時間線標記</b><br>依時間順序簡要記錄教室裡發生的事件，每則自動標上時間。適合質性觀察，例如某位學生的學習歷程、師生互動的細節。</div>
+    <div><b class="tag">DTC</b><b>質量雙元時間線標記</b><br>結合前兩者：一邊按按鈕標記行為，一邊寫文字記錄。因為兩件事同時進行，<b>文字建議簡短摘述</b>，才不會漏掉課堂中的標記。</div>
+  </div>
+
+  <h2 id="flow">共同流程</h2>
+  <ol>
+    <li><b>首頁選擇工具。</b>未結束的觀課會顯示在最上方，可以「繼續記錄」或「捨棄」。</li>
+    <li><b>填觀課資訊</b>（標題、日期、班級、授課教師等，都可留白之後再補），UTC、DTC 還要設定代碼按鈕。</li>
+    <li><b>進入記錄畫面</b>，上課開始時按「開始計時」。</li>
+    <li>課堂中記錄；需要中斷可按「暫停」，暫停期間不計入課堂時間。</li>
+    <li>按「結束觀課」，進入結果頁查看時間軸、修改記錄、匯出檔案。</li>
+  </ol>
+  <figure class="phone">
+    <img src="guide/img/01-home.webp" alt="首頁：上方是未結束觀課的提示，中間是三種工具，下方是觀課記錄清單" loading="lazy" width="780" height="1688">
+    <figcaption>首頁。未結束的觀課會顯示在最上方，完成的觀課列在「觀課記錄」。</figcaption>
+  </figure>
+  <p>記錄畫面上方隨時顯示兩個時間：大字是<b>課堂經過時間</b>（扣除暫停），小字是<b>現在時刻</b>。中途才進教室的觀課者，可以用現在時刻和其他人的記錄對照。</p>
+
+  <h2 id="utc">UTC 代碼計時</h2>
+  <h3>設定代碼按鈕</h3>
+  <ul>
+    <li>可設 1 到 12 個按鈕。手機直式建議 8 個以內，超過時畫面需要捲動。</li>
+    <li>每個按鈕可選兩種記錄方式：
+      <ul>
+        <li><b>持續</b>：按一下開始、再按一下結束，會算出時間長度。例如教師講述、小組討論。</li>
+        <li><b>單次</b>：按一下記一次，只記次數與時間點。例如學生舉手、教師讚美。</li>
+      </ul>
+    </li>
+    <li>點左側色塊可換顏色；「套用」選單有現成的分類範本，參考<a href="#codes">代碼分類範例</a>。</li>
+    <li><b>持續代碼互斥</b>：開啟後，按下一個持續代碼會自動結束其他進行中的持續代碼。適合佛蘭德斯互動分析這類「同一時間只有一種行為」的架構。</li>
+    <li>按鈕設定會自動記住，下次開新的觀課時沿用。</li>
+  </ul>
+  <figure class="phone">
+    <img src="guide/img/02-utc-setup.webp" alt="代碼按鈕設定：每列有色塊、名稱、持續或單次切換與刪除鈕" loading="lazy" width="716" height="1442">
+    <figcaption>代碼按鈕設定。「學生舉手」設為單次，其餘為持續。</figcaption>
+  </figure>
+  <h3>記錄</h3>
+  <ul>
+    <li>持續代碼進行中時，按鈕會變成實心並顯示這一段已經多久；單次代碼右下角顯示累計次數。</li>
+    <li>按錯了就按「↶ 復原」，撤回最近一次的按鈕動作。互斥模式下自動結束的代碼也會一起恢復。</li>
+    <li>暫停時，進行中的代碼會保持進行中，只是不計時；按「繼續」後接著算。</li>
+    <li>電腦上可以用數字鍵 <kbd>1</kbd>～<kbd>0</kbd> 操作前 10 個按鈕。</li>
+  </ul>
+  <figure class="phone">
+    <img src="guide/img/03-utc-record.webp" alt="UTC 記錄畫面：六個代碼按鈕，小組討論進行中顯示 06:12，學生舉手顯示 ×3" loading="lazy" width="780" height="1688">
+    <figcaption>UTC 記錄中。「小組討論」已進行 6 分 12 秒，「學生舉手」記了 3 次。</figcaption>
+  </figure>
+
+  <h2 id="atc">ATC 軼事記錄</h2>
+  <h3>操作方式</h3>
+  <ul>
+    <li><b>開始打字的那一刻</b>會自動記下「開始記錄時間」，不用先按任何按鈕；按「送出」或 <kbd>Enter</kbd> 時記下「送出時間」。</li>
+    <li>如果打了字但隔一陣子才繼續寫，可以按「改成現在」，把開始時間更新為現在。</li>
+    <li>「時刻」按鈕（電腦用 <kbd>Ctrl</kbd> + <kbd>;</kbd>）會在文字中插入現在時刻，例如 <span class="num">[10:52:14]</span>，方便標記一則記錄中的轉折點。</li>
+    <li>要換行請按 <kbd>Shift</kbd> + <kbd>Enter</kbd>。使用注音等輸入法選字時按 Enter 不會誤送出。</li>
+    <li>送出的記錄可以隨時「修改」或「刪除」，結束觀課後也可以在結果頁修改。</li>
+    <li>手機上的輸入列固定在畫面底部，鍵盤跳出時會跟著上移，像傳訊息一樣使用。</li>
+  </ul>
+  <figure class="phone">
+    <img src="guide/img/04-atc-record.webp" alt="ATC 手機記錄畫面：上方三則已送出的記錄，下方輸入列含時刻按鈕、輸入框與送出鈕" loading="lazy" width="780" height="1688">
+    <figcaption>ATC 手機畫面。輸入框中插入了現在時刻，上方顯示這則的開始時間。</figcaption>
+  </figure>
+  <h3>軼事記錄要怎麼記</h3>
+  <ul>
+    <li><b>記重要、有意義、值得記的</b>：依觀察焦點要記的行為或事件。</li>
+    <li><b>記好奇、感興趣、會關注的</b>：現場觀察中值得注意的行為或事件。</li>
+    <li><b>記來得及記的</b>：來不及就用縮寫、關鍵詞；盡量客觀描述事實，減少價值判斷用語。</li>
+    <li>可以記錄<b>先前行為、主要行為、行為結果</b>，或用人、事、時、地、如何（5W）的元素來記。「為什麼」屬於記錄後的分析與詮釋，必要時用括號附註。</li>
+    <li>盡量寫成有前因、後果與脈絡的<b>完整片段</b>，避免變成流水帳或零散記錄。</li>
+  </ul>
+
+  <h2 id="dtc">DTC 質量雙元</h2>
+  <ul>
+    <li>代碼按鈕的設定與 UTC 相同，文字記錄的方式與 ATC 相同；兩者的按鈕設定分開記憶。</li>
+    <li><b>復原只撤回按鈕動作</b>，不會刪掉已送出的文字；文字請用「刪除」。</li>
+    <li><b>手機</b>：按鈕在上、輸入列在下。打字時輸入列上方會出現一排可左右滑動的代碼小按鈕，點了鍵盤不會收起，可以邊打字邊標記。</li>
+    <li><b>平板橫放、電腦</b>：左邊按鈕、右邊文字。打字時用 <kbd>Alt</kbd> + 數字鍵（Mac 為 <kbd>Option</kbd> + 數字鍵）操作按鈕，不必離開文字框。</li>
+    <li>按鈕建議 6 個以內，手機上文字框才不會被擠到太下面。</li>
+  </ul>
+  <figure class="pair">
+    <img src="guide/img/05-dtc-typing.webp" alt="DTC 手機打字中：輸入列上方出現可滑動的代碼小按鈕" loading="lazy" width="780" height="1688">
+    <img src="guide/img/06-dtc-desktop.webp" alt="DTC 電腦畫面：左側代碼按鈕，右側文字輸入與記錄列表" loading="lazy" width="1600" height="950" style="align-self:center;border-radius:12px;max-width:100%">
+    <figcaption>左：手機打字中，輸入列上方是代碼小按鈕。右：電腦版，左按鈕、右文字。</figcaption>
+  </figure>
+
+  <h2 id="result">結果與匯出</h2>
+  <h3>時間軸</h3>
+  <p>色帶是持續行為，菱形是單次標記；ATC、DTC 最下列的圓點是文字記錄的送出時間，前方淡色線段是撰寫期間，數字對應記錄編號。在電腦上把滑鼠移到色帶或圓點上可看到詳細時間與內容。</p>
+  <figure>
+    <img src="guide/img/08-result-timeline.webp" alt="DTC 範例結果的時間軸：六列代碼色帶與菱形，最下列為文字記錄圓點" loading="lazy" width="1456" height="680">
+    <figcaption>時間軸（DTC 範例資料）。</figcaption>
+  </figure>
+  <h3>時間分配與明細</h3>
+  <p>「時間分配」列出每個代碼的次數、總時長、占全課比例與平均每次長度；比例以扣除暫停後的課堂長度計算。展開「記錄明細」可以刪除誤按的標記，結果會立即重算。</p>
+  <figure>
+    <img src="guide/img/09-result-stats.webp" alt="時間分配表：各代碼的次數、總時長、占比、平均每次與比例長條" loading="lazy" width="1456" height="694">
+    <figcaption>時間分配（DTC 範例資料）。</figcaption>
+  </figure>
+  <h3>匯出</h3>
+  <p>檔名只用英數字（例如 <span class="num">DTC_20261106_1010.xlsx</span>），在任何系統都能正常開啟。中文標題寫在檔案內容裡。</p>
+  <figure>
+    <img src="guide/img/10-export.webp" alt="匯出區：Excel 試算表、時間軸圖片、備份檔三個按鈕，各自顯示檔名" loading="lazy" width="1456" height="390">
+  </figure>
+  <table>
+    <thead><tr><th>檔案</th><th>內容</th></tr></thead>
+    <tbody>
+      <tr><td>Excel 試算表</td><td>
+        <b>觀課資訊</b>：標題、日期、開始與結束時刻、課堂長度等。<br>
+        <b>統計</b>（UTC、DTC）：各代碼次數、總時長、占比、平均每次、每分鐘次數。<br>
+        <b>明細</b>（UTC、DTC）：每一筆標記的開始、結束、長度，含課堂時間與時鐘時刻。<br>
+        <b>舊版格式</b>（UTC、DTC）：與 1.x 版相同的 start／stop 秒數欄位，原本的分析流程可直接沿用。<br>
+        <b>文字記錄</b>（ATC、DTC）：序數、開始記錄時間、送出時間、記錄文字與時鐘時刻；DTC 另有「撰寫期間進行中的代碼」，可做質量交叉分析。</td></tr>
+      <tr><td>時間軸圖片</td><td>PNG 圖檔，白底，含標題與日期，可直接貼進議課簡報或報告。</td></tr>
+      <tr><td>備份檔</td><td>JSON 格式的完整記錄。可在另一台裝置的首頁「匯入備份檔」，繼續查看與匯出。首頁的「匯出全部備份」可一次備份所有觀課。</td></tr>
+    </tbody>
+  </table>
+  <div class="note-box">登入 Google、自動存到個人雲端硬碟的功能將在下一階段加入。在那之前，請以匯出檔案保存記錄。</div>
+
+  <h2 id="codes">代碼分類範例</h2>
+  <p>以下分類取自原版使用說明與「100 道焦點問題」。標示「範本」的可在 UTC、DTC 設定頁的「套用」選單直接載入，再依需要修改名稱。</p>
+
+  <h3>佛蘭德斯互動分析（FIAC）<span class="badge">範本</span></h3>
+  <p class="small muted">套用時會自動開啟「持續代碼互斥」。</p>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>代碼</th><th>操作型定義</th></tr></thead>
+    <tbody>
+      <tr><td>接納感受</td><td>以不具威脅性的方式，接納及澄清學生的態度或情感語氣。</td></tr>
+      <tr><td>稱讚鼓勵</td><td>稱讚或鼓勵學生的動作或行為，包括點頭、說「嗯」「繼續」。</td></tr>
+      <tr><td>採納學生想法</td><td>澄清、擴大或發展學生提出的意見或想法。</td></tr>
+      <tr><td>教師提問</td><td>以教師的意見或想法為基礎，詢問學生有關內容或步驟的問題。</td></tr>
+      <tr><td>講述</td><td>就內容或步驟提供事實或見解，表達教師自己的觀念。</td></tr>
+      <tr><td>給予指示</td><td>指示、指令或命令，期望學生服從。</td></tr>
+      <tr><td>批評或維護權威</td><td>企圖改變學生行為的陳述、責罵學生、說明教師為何這樣做。</td></tr>
+      <tr><td>學生被動發言</td><td>學生回應教師的話，表達受到限制。</td></tr>
+      <tr><td>學生主動發言</td><td>學生主動開啟對話、表達想法、引起新話題。</td></tr>
+      <tr><td>停頓、沉默或混亂</td><td>暫時停頓、短時間安靜或混亂，觀察者無法瞭解師生溝通。</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>教學情境＋個別學生行為<span class="badge">範本</span></h3>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>代碼</th><th>說明</th></tr></thead>
+    <tbody>
+      <tr><td>GI-1 單向教學</td><td>教師單向主導的教學，例如講述、說明、示範、看影片。</td></tr>
+      <tr><td>GI-2 雙向互動</td><td>師生雙向互動的教學，例如提問、團體討論。</td></tr>
+      <tr><td>GA 分組活動</td><td>分組實驗、小組討論、分站學習、小組發表。</td></tr>
+      <tr><td>IL 個別學習</td><td>個人閱讀或練習、自主學習。</td></tr>
+      <tr><td>I 積極主動</td><td>主動提問、主動回答或參與討論、主動做筆記。</td></tr>
+      <tr><td>E 被動努力</td><td>依指令完成任務、專注聆聽、針對提問回答。</td></tr>
+      <tr><td>N 不專心</td><td>需經提醒才進行任務、無法回應提問、做與學習無關的動作。</td></tr>
+      <tr><td>D 干擾行為</td><td>未經允許離座、妨礙他人學習、討論無關內容干擾學習。</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>兩位個別學生行為<span class="badge">範本</span></h3>
+  <p>同時觀察 A、B 兩位學生，各有 I 積極主動、E 被動努力、N 不專心、D 干擾四類，共 8 個按鈕。定義同上。</p>
+
+  <h3>小組討論：依職務的發言<span class="badge">範本</span></h3>
+  <p>組長發言、記錄發言、報告發言、提問員發言、靜默、離題、正題。可把「組長」等職務改成學生座號或代號。</p>
+
+  <h3>其他參考</h3>
+  <ul>
+    <li><b>小組合作型態</b>：想法交流、相互幫助、協同拼圖、團隊競爭、相關行為、無關行為。</li>
+    <li><b>延宕反應時間</b>：教師提問後等待時間、學生回答後教師等待時間、教師指令後學生行動時間、上課鈴響到實際上課時間。</li>
+    <li><b>教師專業發展規準</b>：喚起舊經驗、揭示學習目標、適當的學習或活動、歸納或結論。</li>
+    <li><b>學生行為次數</b>（適合設為「單次」）：回答問題、提出問題、離開座位、與鄰座交談、玩手機、書寫筆記。</li>
+  </ul>
+
+  <h2 id="keys">鍵盤快捷鍵（電腦）</h2>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>按鍵</th><th>功能</th><th>適用</th></tr></thead>
+    <tbody>
+      <tr><td><kbd>1</kbd>～<kbd>0</kbd></td><td>操作第 1～10 個代碼按鈕（游標不在文字框時）</td><td>UTC、DTC</td></tr>
+      <tr><td><kbd>Alt</kbd> + <kbd>1</kbd>～<kbd>0</kbd></td><td>打字中操作代碼按鈕（Mac 為 Option）</td><td>DTC</td></tr>
+      <tr><td><kbd>Enter</kbd></td><td>送出文字記錄</td><td>ATC、DTC</td></tr>
+      <tr><td><kbd>Shift</kbd> + <kbd>Enter</kbd></td><td>換行</td><td>ATC、DTC</td></tr>
+      <tr><td><kbd>Ctrl</kbd> + <kbd>;</kbd></td><td>插入現在時刻（Mac 也用 Control）</td><td>ATC、DTC</td></tr>
+    </tbody>
+  </table></div>
+
+  <h2 id="faq">常見問題</h2>
+  <h3>不小心關掉頁面或重新整理，記錄還在嗎？</h3>
+  <p>還在。重新開啟後，首頁最上方會出現「有一場觀課尚未結束」，按「繼續記錄」即可接續，課堂時間也會正確延續。</p>
+  <h3>手機鎖螢幕或切到其他 App，時間會不準嗎？</h3>
+  <p>不會。課堂時間是以實際時鐘計算，回到畫面時會顯示正確時間。記錄中工具會盡量讓螢幕保持開啟。</p>
+  <h3>想在另一台裝置看記錄？</h3>
+  <p>在原裝置的結果頁按「備份檔」，或在首頁按「匯出全部備份」，再到另一台裝置的首頁「匯入備份檔」。</p>
+  <h3>畫面還是舊的版本？</h3>
+  <p>為了能離線使用，工具會把程式存在裝置上。發布新版後，開啟時會在背景下載，並在回到首頁時自動換成新版；若仍看到舊版，關閉頁面後重新開啟即可。</p>
+  <h3>可以給其他教師使用嗎？</h3>
+  <p>可以，分享網址 <span class="url">https://fox122886.github.io/digiobstool/</span> 即可。每位使用者的記錄只存在自己的裝置上，彼此不會看到。</p>
+
+  <div class="foot2">
+    <p>國立臺灣師範大學師資培育學院 張民杰教授團隊。本工具改寫自 Miikka Turkkila 的 <a href="https://github.com/MTurkkila/LOBS" target="_blank" rel="noopener">LOBS（Lesson OBServation app）</a>，以<a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hant" target="_blank" rel="noopener">創用 CC 姓名標示-非商業性-相同方式分享 4.0</a> 釋出。</p>
+    <p>問題與建議：<span class="num">ntnutdo@gmail.com</span>　電話：<span class="num">02-7749-1228</span></p>
+  </div>
+</main>
+</body>
+</html>

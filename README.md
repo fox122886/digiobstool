@@ -3,6 +3,11 @@
 國立臺灣師範大學師資培育學院 張民杰教授團隊的數位觀課工具改版。
 可離線使用的網頁 APP（PWA），每個動作即時存在使用者的裝置上。
 
+- **開始使用**：<https://fox122886.github.io/digiobstool/>
+- **操作指引**：<https://fox122886.github.io/digiobstool/guide.html>
+
+手機可在瀏覽器選單選「加到主畫面」（iPhone 為 Safari「分享 → 加入主畫面」），安裝後可離線開啟。
+
 ## 目前包含
 
 - **UTC 通用時間線標記**：1–12 個自訂代碼按鈕，可設為「持續」（按開始／再按結束）或「單次」（按一下記一次）。
@@ -15,6 +20,7 @@
 
 ```
 index.html             入口頁
+guide.html             操作指引（截圖在 guide/img/）
 app.css                版面與配色（含深色模式）
 manifest.webmanifest   安裝到主畫面用的設定
 sw.js                  離線快取（改版時要更新裡面的 VERSION）

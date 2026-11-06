@@ -82,6 +82,7 @@ function startTick() { stopTick(); state.tick = setInterval(updateClock, 250); }
 
 // ---------- 首頁 ----------
 async function renderHome() {
+  if (state.updateReady) { location.reload(); return; }
   state.view = 'home';
   state.s = null;
   stopTick();
@@ -94,19 +95,20 @@ async function renderHome() {
 
   const item = (s) => {
     const live = s.status !== 'ended';
-    const meta = [s.meta.date, clockTime(s.clock.startedAt), live ? (s.status === 'ready' ? '尚未開始' : '進行中') : fmt(totalSec(s))].filter(Boolean).join(' · ');
+    const when = [s.meta.date, clockTime(s.clock.startedAt)].filter(Boolean).join(' ');
     const count = [s.mode !== 'ATC' && `${s.codes.length} 個代碼`, s.mode !== 'UTC' && `${notes(s).length} 則記錄`].filter(Boolean).join('、');
+    const dur = live ? (s.status === 'ready' ? '未開始' : '進行中') : fmt(totalSec(s));
     return `<li><button class="item" data-act="open" data-id="${esc(s.id)}">
       <span class="badge ${live ? 'live' : ''}">${s.mode}</span>
-      <span class="main"><span class="t">${esc(displayTitle(s))}</span><br><span class="sub num">${esc(meta)} · ${count}</span></span>
-      <span aria-hidden="true" class="muted">›</span></button></li>`;
+      <span class="main"><span class="t">${esc(displayTitle(s))}</span><br><span class="sub"><span class="num">${esc(when)}</span> · ${count}</span></span>
+      <span class="dur num">${dur}</span></button></li>`;
   };
 
   app.innerHTML = `<div class="wrap">
     <div class="brand">
       <span class="eyebrow">國立臺灣師範大學 · 數位觀課工具 2.0</span>
       <h1>數位觀課工具</h1>
-      <p class="muted">可離線使用，每個動作都即時存在這台裝置上。</p>
+      <p class="muted">可離線使用，每個動作都即時存在這台裝置上。<a class="guide-link" href="guide.html">操作指引 →</a></p>
     </div>
     ${state.persistent ? '' : `<div class="panel" style="border-color:var(--warn)"><p><b>這個瀏覽器無法長期保存資料</b>（可能是無痕模式）。記錄只會留到關閉頁面為止，結束後請立即匯出。</p></div>`}
     ${unfinished.map((s) => `<div class="panel resume"><div class="grow"><b>有一場觀課尚未結束</b><br>
@@ -200,7 +202,7 @@ function renderSetup() {
     </section>
     ${hasCodes(s) ? `<section class="panel">
       <header><h2>代碼按鈕</h2><span class="hint num" id="code-count">${s.codes.length} / ${MAX_CODES}</span></header>
-      <p class="hint">「持續」按一下開始、再按一下結束，會算出時間長度；「單次」按一下記一次，適合舉手、讚美這類瞬間行為。點色塊可以換顏色。</p>
+      <p class="hint">「持續」按一下開始、再按一下結束，會算出時間長度；「單次」按一下記一次，適合舉手、讚美這類瞬間行為。點色塊可以換顏色。分類方式可參考<a href="guide.html#codes">操作指引的代碼分類範例</a>。</p>
       <div class="codes-edit" id="codes">${codesEditor(s)}</div>
       <p class="err" id="code-err" hidden></p>
       <div class="row">
@@ -953,9 +955,12 @@ app.addEventListener('change', (e) => {
   if (t.id === 'preset' && t.value) {
     const p = PRESETS.find((x) => x.id === t.value);
     state.draft.codes = p.codes.map(([label, kind], i) => ({ id: 'c' + uid(), label, kind, color: PALETTE[i] }));
+    state.draft.exclusive = !!p.exclusive;
+    const ex = document.getElementById('exclusive');
+    if (ex) ex.checked = state.draft.exclusive;
     t.value = '';
     refreshCodes();
-    toast(`已套用「${p.name}」`);
+    toast(`已套用「${p.name}」${p.exclusive ? '，並開啟互斥' : ''}`);
   }
   if (t.id === 'imp' && t.files?.[0]) importFile(t.files[0]);
   if (t.id === 'exclusive' && state.draft) state.draft.exclusive = t.checked;
@@ -998,6 +1003,17 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => { 
   state.persistent = await store.ready();
   await renderHome();
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
-    navigator.serviceWorker.register('sw.js').catch(() => { /* 預覽環境不支援時略過 */ });
+    const hadController = !!navigator.serviceWorker.controller;
+    try {
+      const reg = await navigator.serviceWorker.register('sw.js');
+      // 回到畫面時檢查是否有新版
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update().catch(() => {}); });
+    } catch (e) { /* 預覽環境不支援時略過 */ }
+    // 新版接手後：在首頁或結果頁就立即重新載入；記錄中則等回到首頁再套用，不打斷觀課
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hadController) return; // 第一次安裝不需要重新載入
+      if (state.view === 'home' || state.view === 'result') location.reload();
+      else state.updateReady = true;
+    });
   }
 })();
