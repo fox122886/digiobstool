@@ -80,8 +80,8 @@ function cloudRow(unsynced) {
   if (!gd.available()) return '';
   const a = state.account;
   if (!a) {
-    return `<div class="panel cloud-row"><div class="grow"><b>存到自己的 Google 雲端硬碟</b><br>
-      <span class="small muted">登入後，結束觀課時會自動存一份試算表到你的雲端硬碟，換裝置也找得到。</span></div>
+    return `<div class="panel cloud-row"><div class="grow"><b>存到 Google 雲端硬碟</b><br>
+      <span class="small muted">登入後，結束觀課會自動存到你的雲端硬碟。</span></div>
       <button class="btn sm primary" data-act="g-signin">連結 Google</button></div>`;
   }
   return `<div class="panel cloud-row"><div class="grow"><span class="small muted">已連結 Google 雲端硬碟</span><br><b class="email">${esc(a.email)}</b></div>
@@ -192,7 +192,6 @@ async function renderHome() {
       <h1>數位觀課工具</h1>
       <p class="muted">可離線使用，每個動作都即時存在這台裝置上。<a class="guide-link" href="guide.html">操作指引 →</a></p>
     </div>
-    ${cloudRow(state.account ? done.filter(gd.needsSync).length : 0)}
     ${state.persistent ? '' : `<div class="panel" style="border-color:var(--warn)"><p><b>這個瀏覽器無法長期保存資料</b>（可能是無痕模式）。記錄只會留到關閉頁面為止，結束後請立即匯出。</p></div>`}
     ${unfinished.map((s) => `<div class="panel resume"><div class="grow"><b>有一場觀課尚未結束</b><br>
       <span class="small muted">${esc(s.mode)} · ${esc(displayTitle(s))}</span></div>
@@ -212,6 +211,7 @@ async function renderHome() {
         <p>代碼按鈕與文字記錄並用，同時掌握時間分配與質性觀察。</p>
         <span class="go">開始設定 →</span></button>
     </section>
+    ${cloudRow(state.account ? done.filter(gd.needsSync).length : 0)}
     <section class="panel" aria-labelledby="hist">
       <header><h2 id="hist">觀課記錄</h2><span class="small muted num">${done.length} 場</span></header>
       ${done.length ? `<ul class="list">${done.map(item).join('')}</ul>` : `<div class="empty">
