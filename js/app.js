@@ -189,7 +189,6 @@ async function renderHome() {
 
   app.innerHTML = `<div class="wrap">
     <div class="brand">
-      <span class="eyebrow">國立臺灣師範大學 · 數位觀課工具 2.0</span>
       <h1>數位觀課工具</h1>
       <p class="muted">可離線使用，每個動作都即時存在這台裝置上。<a class="guide-link" href="guide.html">操作指引 →</a></p>
     </div>
