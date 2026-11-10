@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>數位觀課工具操作指引</title>
 <meta name="theme-color" content="#0F6E66">
-<meta name="description" content="UTC、ATC、DTC 數位觀課工具 2.0 的操作說明、代碼分類範例與常見問題。">
+<meta name="description" content="UTC、ATC、DTC、ITC 數位觀課工具 2.0 的操作說明、代碼分類範例與常見問題。">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="stylesheet" href="app.css">
 <style>
@@ -49,7 +49,7 @@
 <main class="g">
   <header class="top">
     <h1>操作指引</h1>
-    <p class="muted">UTC 通用時間線標記、ATC 軼事記錄時間線標記、DTC 質量雙元時間線標記</p>
+    <p class="muted">UTC 通用時間線標記、ATC 軼事記錄時間線標記、DTC 質量雙元時間線標記、ITC 間隔時間線標記</p>
     <div class="row"><a class="btn primary sm" href="./">開啟數位觀課工具</a><span class="small muted url">fox122886.github.io/digiobstool</span></div>
   </header>
 
@@ -57,11 +57,12 @@
     <b>目錄</b>
     <ol>
       <li><a href="#before">開始之前</a></li>
-      <li><a href="#choose">三種工具怎麼選</a></li>
+      <li><a href="#choose">四種工具怎麼選</a></li>
       <li><a href="#flow">共同流程</a></li>
       <li><a href="#utc">UTC 代碼計時</a></li>
       <li><a href="#atc">ATC 軼事記錄</a></li>
       <li><a href="#dtc">DTC 質量雙元</a></li>
+      <li><a href="#itc">ITC 時間抽樣（在工作中）</a></li>
       <li><a href="#result">結果、匯出與雲端</a></li>
       <li><a href="#codes">代碼分類範例</a></li>
       <li><a href="#keys">鍵盤快捷鍵</a></li>
@@ -84,23 +85,24 @@
     </li>
   </ul>
 
-  <h2 id="choose">三種工具怎麼選</h2>
+  <h2 id="choose">四種工具怎麼選</h2>
   <div class="tools">
     <div><b class="tag">UTC</b><b>通用時間線標記</b><br>依觀察焦點把課堂中看到、聽到的事實分類，用按鈕標記起訖時間。適合想知道「各種行為占多少時間、出現幾次」，例如教師講述與學生討論的比例。</div>
     <div><b class="tag">ATC</b><b>軼事記錄時間線標記</b><br>依時間順序簡要記錄教室裡發生的事件，每則自動標上時間。適合質性觀察，例如某位學生的學習歷程、師生互動的細節。</div>
     <div><b class="tag">DTC</b><b>質量雙元時間線標記</b><br>結合前兩者：一邊按按鈕標記行為，一邊寫文字記錄。因為兩件事同時進行，<b>文字建議簡短摘述</b>，才不會漏掉課堂中的標記。</div>
+    <div><b class="tag">ITC</b><b>間隔時間線標記</b><br>時間抽樣：輪流觀察每位學生（或每一組），每隔固定秒數記下他當下的狀態，全部觀察一次為一輪。適合「在工作中」（on-task）觀察，了解全班或特定學生的專注與參與情形隨時間的變化。</div>
   </div>
 
   <h2 id="flow">共同流程</h2>
   <ol>
     <li><b>首頁選擇工具。</b>未結束的觀課會顯示在最上方，可以「繼續記錄」或「捨棄」。</li>
-    <li><b>填觀課資訊</b>（標題、日期、班級、授課教師等，都可留白之後再補），UTC、DTC 還要設定代碼按鈕。</li>
+    <li><b>填觀課資訊</b>（標題、日期、班級、授課教師等，都可留白之後再補），UTC、DTC 還要設定代碼按鈕；ITC 要設定觀察人數、取樣間隔與記錄類別。</li>
     <li><b>進入記錄畫面</b>，上課開始時按「開始計時」。</li>
     <li>課堂中記錄；需要中斷可按「暫停」，暫停期間不計入課堂時間。</li>
     <li>按「結束觀課」，進入結果頁查看時間軸、修改記錄、匯出檔案。</li>
   </ol>
   <figure class="phone">
-    <img src="guide/img/01-home.webp" alt="首頁：上方是未結束觀課的提示，中間是三種工具，下方是觀課記錄清單" loading="lazy" width="780" height="1688">
+    <img src="guide/img/01-home.webp" alt="首頁：上方是未結束觀課的提示，中間是各種工具，下方是觀課記錄清單" loading="lazy" width="780" height="1688">
     <figcaption>首頁。未結束的觀課會顯示在最上方，完成的觀課列在「觀課記錄」。</figcaption>
   </figure>
   <p>記錄畫面上方隨時顯示兩個時間：大字是<b>課堂經過時間</b>（扣除暫停），小字是<b>現在時刻</b>。中途才進教室的觀課者，可以用現在時刻和其他人的記錄對照。</p>
@@ -172,6 +174,42 @@
     <figcaption>左：手機打字中，輸入列上方是代碼小按鈕。右：電腦版，左按鈕、右文字。</figcaption>
   </figure>
 
+  <h2 id="itc">ITC 時間抽樣（在工作中）</h2>
+  <h3>設定</h3>
+  <ul>
+    <li><b>觀察人數</b>：1 到 60 位，依序編為 1 號、2 號……。也可以在「座號或代稱」填入要觀察的對象（例如 <span class="num">3, 7, 12, 15</span> 或 <span class="num">A組 B組 C組</span>），人數會自動帶入，只觀察部分學生時很方便。</li>
+    <li><b>取樣間隔</b>：
+      <ul>
+        <li><b>自動倒數</b>（3、5、10、15、20、30 秒）：每一位觀察固定秒數，期間點選他的狀態，時間到自動記錄並換下一位；可以在倒數中改選。倒數最後 3 秒數字會變色閃爍並震動提醒。沒有選的會記為「未記錄」。</li>
+        <li><b>手動</b>：看清楚後點一下類別就記錄並換下一位，畫面顯示這一位已觀察多久。適合第一次使用或座位不好掌握時。</li>
+      </ul>
+    </li>
+    <li><b>記錄類別</b>：預設是「學生在工作中」的六個類別（主動在工作中、被動在工作中、尋求協助、無法判斷、不在工作中、干擾行為），可改名、換色、增減（最多 12 個），「套用」選單另有參與程度、在工作中／不在工作中二分、數位學習活動等範本。</li>
+    <li>建議先準備座位表、決定觀察的範圍與順序；類別請用直接看得到的外顯行為定義。</li>
+  </ul>
+  <h3>記錄</h3>
+  <ul>
+    <li>上方大字是目前觀察的對象與倒數，下方一排小方格是這一輪的進度，已記錄的會填上類別顏色。</li>
+    <li><b>記錄 ›</b>（自動模式）：不等倒數，立即記錄並換下一位；<b>跳過 ›</b>（手動模式）：這位看不到，記為未記錄。</li>
+    <li><b>↶ 復原</b>：撤回上一筆，回到那一位重新觀察，原本選的類別會保留。</li>
+    <li>暫停時倒數停住，按「繼續」接著算。手機鎖螢幕太久回來時，不會補上一長串「未記錄」，而是從目前這位接續。</li>
+    <li>電腦上可用數字鍵 <kbd>1</kbd>～<kbd>0</kbd> 選類別、<kbd>Enter</kbd> 記錄並換下一位。</li>
+  </ul>
+  <figure class="phone">
+    <img src="guide/img/11-itc-record.webp" alt="ITC 記錄畫面：第 2 輪觀察 5 號，倒數 5 秒，下方是本輪進度格與六個類別按鈕" loading="lazy" width="780" height="1688">
+    <figcaption>ITC 記錄中（每位 10 秒）。第 2 輪、正在觀察 5 號，已選「主動在工作中」。</figcaption>
+  </figure>
+  <h3>結果</h3>
+  <ul>
+    <li><b>各輪分布</b>：每一欄是一輪，顏色比例是該輪各類別的人次，可看出專注情形在課堂中的變化。</li>
+    <li><b>各類別人次</b>：全部觀察人次中各類別的次數與比例。</li>
+    <li><b>對象 × 輪</b>：每位學生每一輪的類別，可看出個別學生的狀況。<b>點格子可以修改</b>該筆記錄。</li>
+  </ul>
+  <figure>
+    <img src="guide/img/12-itc-result.webp" alt="ITC 結果：各輪 100% 堆疊長條圖、各類別人次表，以及對象乘以輪的類別方格" loading="lazy" width="1456" height="2352">
+    <figcaption>ITC 結果（範例資料：10 位學生、每位 20 秒、共 12 輪）。</figcaption>
+  </figure>
+
   <h2 id="result">結果、匯出與雲端</h2>
   <h3>時間軸</h3>
   <p>色帶是持續行為，菱形是單次標記；ATC、DTC 最下列的圓點是文字記錄的送出時間，前方淡色線段是撰寫期間，數字對應記錄編號。在電腦上把滑鼠移到色帶或圓點上可看到詳細時間與內容。</p>
@@ -198,8 +236,9 @@
         <b>統計</b>（UTC、DTC）：各代碼次數、總時長、占比、平均每次、每分鐘次數。<br>
         <b>明細</b>（UTC、DTC）：每一筆標記的開始、結束、長度，含課堂時間與時鐘時刻。<br>
         <b>舊版格式</b>（UTC、DTC）：與 1.x 版相同的 start／stop 秒數欄位，原本的分析流程可直接沿用。<br>
-        <b>文字記錄</b>（ATC、DTC）：序數、開始記錄時間、送出時間、記錄文字與時鐘時刻；DTC 另有「撰寫期間進行中的代碼」，可做質量交叉分析。</td></tr>
-      <tr><td>時間軸圖片</td><td>PNG 圖檔，白底，含標題與日期，可直接貼進議課簡報或報告。</td></tr>
+        <b>文字記錄</b>（ATC、DTC）：序數、開始記錄時間、送出時間、記錄文字與時鐘時刻；DTC 另有「撰寫期間進行中的代碼」，可做質量交叉分析。<br>
+        <b>統計／各輪／對象x輪／明細</b>（ITC）：各類別人次與比例、每一輪的類別分布與起訖時刻、每位對象每輪的類別與小計，以及每一筆取樣的時間。</td></tr>
+      <tr><td>時間軸圖片</td><td>PNG 圖檔，白底，含標題與日期，可直接貼進議課簡報或報告。ITC 為各輪分布圖加上對象 × 輪方格。</td></tr>
       <tr><td>備份檔</td><td>JSON 格式的完整記錄。可在另一台裝置的首頁「匯入備份檔」，繼續查看與匯出。首頁的「匯出全部備份」可一次備份所有觀課。</td></tr>
     </tbody>
   </table>
@@ -269,6 +308,8 @@
     <thead><tr><th>按鍵</th><th>功能</th><th>適用</th></tr></thead>
     <tbody>
       <tr><td><kbd>1</kbd>～<kbd>0</kbd></td><td>操作第 1～10 個代碼按鈕（游標不在文字框時）</td><td>UTC、DTC</td></tr>
+      <tr><td><kbd>1</kbd>～<kbd>0</kbd></td><td>選擇第 1～10 個類別（手動模式會直接記錄並換下一位）</td><td>ITC</td></tr>
+      <tr><td><kbd>Enter</kbd></td><td>記錄並換下一位（手動模式為跳過）</td><td>ITC</td></tr>
       <tr><td><kbd>Alt</kbd> + <kbd>1</kbd>～<kbd>0</kbd></td><td>打字中操作代碼按鈕（Mac 為 Option）</td><td>DTC</td></tr>
       <tr><td><kbd>Enter</kbd></td><td>送出文字記錄</td><td>ATC、DTC</td></tr>
       <tr><td><kbd>Shift</kbd> + <kbd>Enter</kbd></td><td>換行</td><td>ATC、DTC</td></tr>

@@ -5,6 +5,7 @@ export const MODES = {
   UTC: { tag: 'UTC', name: '通用時間線標記', full: '通用時間線標記數位觀課工具', en: 'Universal timeline coding' },
   ATC: { tag: 'ATC', name: '軼事記錄時間線標記', full: '軼事記錄時間線標記數位觀課工具', en: 'Anecdotal timeline coding' },
   DTC: { tag: 'DTC', name: '質量雙元時間線標記', full: '質量雙元時間線標記數位觀課工具', en: 'Duality timeline coding' },
+  ITC: { tag: 'ITC', name: '間隔時間線標記', full: '間隔時間線標記數位觀課工具', en: 'Interval timeline coding' },
 };
 
 // 12 色：亮暗主題下白字皆可讀
@@ -178,6 +179,7 @@ export function displayTitle(s) {
 
 // 範例資料（標示為範例，用於試看結果頁）
 export function sampleSession(mode) {
+  if (mode === 'ITC') return sampleITC();
   const base = new Date(); base.setHours(10, 10, 0, 0); base.setDate(base.getDate() - 1);
   const preset = PRESETS[0].codes.map(([label, kind], i) => ({ label, kind, color: PALETTE[i] }));
   const s = newSession(mode, mode !== 'ATC' ? [...preset.slice(0, 5), { label: '學生舉手', kind: 'event', color: PALETTE[5] }] : []);
@@ -210,6 +212,102 @@ export function sampleSession(mode) {
     ];
     for (const [t0, t, text] of items) ev('note', t, { t0, text });
   }
+  s.updatedAt = s.clock.endedAt;
+  return s;
+}
+
+// ================= ITC 間隔時間線標記（時間抽樣） =================
+// 依序輪流觀察 n 位對象；每位觀察一段時間後記下一個類別，全部觀察一次為一輪
+export const ITC_INTERVALS = [0, 3, 5, 10, 15, 20, 30]; // 0 = 手動
+export const ITC_MAX_N = 60;
+
+// 「在工作中」類別：綠＝主動投入、青＝被動、藍＝求助、灰＝無法判斷、橘＝不在工作中、紅＝干擾
+const ON_TASK_COLORS = ['#2E8B57', '#2A8A96', '#2F6FB3', '#6E747A', '#C2572B', '#A8324A'];
+export const ITC_PRESETS = [
+  { id: 'on-task', name: '學生在工作中（預設）', codes: ['主動在工作中', '被動在工作中', '尋求協助', '無法判斷', '不在工作中', '干擾行為'], colors: ON_TASK_COLORS },
+  { id: 'engage', name: '參與程度 A–F', codes: ['A 主動參與', 'B 任務被動', 'C 尋求協助', 'D 未能聚焦', 'E 未參與', 'F 不良行為'], colors: ON_TASK_COLORS },
+  { id: 'on-off', name: '在工作中／不在工作中', codes: ['在工作中', '不在工作中'], colors: ['#2E8B57', '#C2572B'] },
+  { id: 'activity', name: '數位學習活動', codes: ['聽講與回應', '看課本', '看平板', '看大螢幕', '寫練習題', '其他'] },
+];
+export const itcPresetCodes = (p) => p.codes.map((label, i) => ({ label, kind: 'event', color: p.colors?.[i] || PALETTE[i % PALETTE.length] }));
+
+export function parseLabels(text) {
+  return String(text || '').split(/[\s,，、;；]+/).map((x) => x.trim()).filter(Boolean).slice(0, ITC_MAX_N);
+}
+
+export const samples = (s) => s.events.filter((e) => e.type === 'sample');
+export const objName = (s, i) => (s.itc.labels?.[i] ? s.itc.labels[i] : `${i + 1} 號`);
+export const objShort = (s, i) => (s.itc.labels?.[i] ? s.itc.labels[i] : String(i + 1));
+
+// 下一筆要記錄的輪次與對象（由已記錄筆數推得）
+export function itcPos(s) {
+  const k = samples(s).length;
+  const n = s.itc.n;
+  return { k, round: Math.floor(k / n) + 1, obj: k % n };
+}
+
+export function itcStats(s) {
+  const sm = samples(s);
+  const n = s.itc.n;
+  const total = sm.length;
+  const byCode = s.codes.map((c) => {
+    const count = sm.filter((e) => e.code === c.id).length;
+    return { code: c, count, pct: total ? count / total : 0 };
+  });
+  const none = sm.filter((e) => !e.code).length;
+  const roundMap = new Map();
+  for (const e of sm) {
+    if (!roundMap.has(e.round)) roundMap.set(e.round, []);
+    roundMap.get(e.round).push(e);
+  }
+  const rounds = [...roundMap.entries()].sort((a, b) => a[0] - b[0]).map(([round, items]) => {
+    const counts = {};
+    for (const c of s.codes) counts[c.id] = 0;
+    let rNone = 0;
+    for (const e of items) { if (e.code && counts[e.code] != null) counts[e.code]++; else rNone++; }
+    return {
+      round, items, counts, none: rNone, size: items.length, complete: items.length >= n,
+      start: Math.min(...items.map((e) => e.t0 ?? e.t)), end: Math.max(...items.map((e) => e.t)),
+    };
+  });
+  const perObj = Array.from({ length: n }, (_, i) => {
+    const mine = sm.filter((e) => e.obj === i);
+    const counts = {};
+    for (const c of s.codes) counts[c.id] = mine.filter((e) => e.code === c.id).length;
+    return { i, name: objName(s, i), counts, none: mine.filter((e) => !e.code).length, total: mine.length };
+  });
+  return { total, byCode, none, rounds, perObj };
+}
+
+// 範例：10 位學生、每位 20 秒、40 分鐘（12 輪）；3 號、8 號較常分心，小組活動時段主動比例較高
+function sampleITC() {
+  const base = new Date(); base.setHours(10, 10, 0, 0); base.setDate(base.getDate() - 1);
+  const s = newSession('ITC', itcPresetCodes(ITC_PRESETS[0]));
+  s.sample = true;
+  s.status = 'ended';
+  s.meta = { ...s.meta, date: todayISO(base), title: '範例：六年丙班 社會「地方的產業」', school: '範例國小', className: '六年丙班', subject: '社會', teacher: '陳老師', observer: '林老師' };
+  s.itc = { n: 10, labels: null, interval: 20, cur: { t0: null, sel: null } };
+  s.clock.startedAt = base.getTime();
+  const per = 20;
+  let seed = 7;
+  const rnd = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+  const [act, pas, help, unk, off, dis] = s.codes.map((c) => c.id);
+  let t = 0, n = 0;
+  for (let r = 1; r <= 12; r++) {
+    const group = r >= 5 && r <= 9; // 小組活動
+    for (let i = 0; i < 10; i++) {
+      const weak = i === 2 || i === 7;
+      const x = rnd();
+      let code;
+      if (r === 1 && i === 4) code = null; // 一筆未記錄
+      else if (weak) code = x < 0.2 ? act : x < 0.45 ? pas : x < 0.55 ? help : x < 0.6 ? unk : x < 0.9 ? off : dis;
+      else if (group) code = x < 0.62 ? act : x < 0.82 ? pas : x < 0.92 ? help : x < 0.96 ? unk : off;
+      else code = x < 0.3 ? act : x < 0.82 ? pas : x < 0.86 ? help : x < 0.9 ? unk : off;
+      s.events.push({ id: 's' + (++n), type: 'sample', round: r, obj: i, code, t0: t, t: t + per });
+      t += per;
+    }
+  }
+  s.clock.endedAt = base.getTime() + t * 1000;
   s.updatedAt = s.clock.endedAt;
   return s;
 }

@@ -2,7 +2,9 @@ import { store } from './store.js';
 import {
   MODES, PALETTE, PRESETS, MAX_CODES, uid, fmt, fmtDur, clockTime, newSession, elapsedSec, isPaused, isRunning,
   codeOf, openCodes, segments, stats, notes, totalSec, displayTitle, sampleSession, APP_VERSION, wallTime, clockHMS,
+  ITC_PRESETS, itcPresetCodes, parseLabels,
 } from './model.js';
+import * as itc from './itc.js';
 import { timelineSVG, download, timelinePNG, xlsxBlob, jsonBlob, names } from './output.js';
 import * as gd from './gdrive.js';
 
@@ -179,7 +181,7 @@ async function renderHome() {
   const item = (s) => {
     const live = s.status !== 'ended';
     const when = [s.meta.date, clockTime(s.clock.startedAt)].filter(Boolean).join(' ');
-    const count = [s.mode !== 'ATC' && `${s.codes.length} 個代碼`, s.mode !== 'UTC' && `${notes(s).length} 則記錄`].filter(Boolean).join('、');
+    const count = isITC(s) ? itc.homeCount(s) : [hasCodes(s) && `${s.codes.length} 個代碼`, hasNotes(s) && `${notes(s).length} 則記錄`].filter(Boolean).join('、');
     const dur = live ? (s.status === 'ready' ? '未開始' : '進行中') : fmt(totalSec(s));
     return `<li><button class="item" data-act="open" data-id="${esc(s.id)}">
       <span class="badge ${live ? 'live' : ''}">${s.mode}</span>
@@ -210,6 +212,10 @@ async function renderHome() {
         <span class="tag">DTC</span><h2>質量雙元時間線標記</h2>
         <p>代碼按鈕與文字記錄並用，同時掌握時間分配與質性觀察。</p>
         <span class="go">開始設定 →</span></button>
+      <button class="mode" data-act="new" data-mode="ITC">
+        <span class="tag">ITC</span><h2>間隔時間線標記</h2>
+        <p>輪流觀察每位學生，每隔數秒記下他是否在工作中，統計全班投入情形。</p>
+        <span class="go">開始設定 →</span></button>
     </section>
     ${cloudRow(state.account ? done.filter(gd.needsSync).length : 0)}
     <section class="panel" aria-labelledby="hist">
@@ -218,7 +224,8 @@ async function renderHome() {
         <p>完成的觀課會列在這裡，可以回頭查看時間軸、編修與匯出。</p>
         <div class="row" style="justify-content:center"><button class="btn sm" data-act="sample" data-mode="UTC">看 UTC 範例結果</button>
         <button class="btn sm" data-act="sample" data-mode="ATC">看 ATC 範例結果</button>
-        <button class="btn sm" data-act="sample" data-mode="DTC">看 DTC 範例結果</button></div></div>`}
+        <button class="btn sm" data-act="sample" data-mode="DTC">看 DTC 範例結果</button>
+        <button class="btn sm" data-act="sample" data-mode="ITC">看 ITC 範例結果</button></div></div>`}
     </section>
     <section class="row">
       <button class="btn sm" data-act="backup-all" ${list.length ? '' : 'disabled'}>匯出全部備份</button>
@@ -235,19 +242,24 @@ async function renderHome() {
 }
 
 // ---------- 設定頁 ----------
-const hasCodes = (s) => s.mode !== 'ATC';
-const hasNotes = (s) => s.mode !== 'UTC';
+const hasCodes = (s) => s.mode === 'UTC' || s.mode === 'DTC';
+const hasNotes = (s) => s.mode === 'ATC' || s.mode === 'DTC';
+const isITC = (s) => s.mode === 'ITC';
 
 async function startNew(mode) {
   let codes = [];
   if (mode !== 'ATC') {
     const last = await store.getSetting('lastCodes_' + mode);
-    codes = (last && last.length ? last : PRESETS[0].codes.map(([label, kind], i) => ({ label, kind, color: PALETTE[i] })))
-      .map((c) => ({ ...c }));
+    const fallback = mode === 'ITC' ? itcPresetCodes(ITC_PRESETS[0]) : PRESETS[0].codes.map(([label, kind], i) => ({ label, kind, color: PALETTE[i] }));
+    codes = (last && last.length ? last : fallback).map((c) => ({ ...c }));
   }
   const lastMeta = await store.getSetting('lastMeta', {});
   const s = newSession(mode, codes);
-  if (mode !== 'ATC') s.exclusive = !!(await store.getSetting('lastExclusive_' + mode, false));
+  if (hasCodes(s)) s.exclusive = !!(await store.getSetting('lastExclusive_' + mode, false));
+  if (mode === 'ITC') {
+    const last = await store.getSetting('lastITC', {});
+    s.itc = { n: last.n || 25, labels: last.labels || null, interval: last.interval ?? 0, cur: { t0: null, sel: null } };
+  }
   s.meta.school = lastMeta.school || '';
   s.meta.observer = lastMeta.observer || '';
   state.draft = s;
@@ -258,10 +270,10 @@ function codesEditor(s) {
   return s.codes.map((c, i) => `<div class="code-row" data-i="${i}">
     <button class="swatch" style="--c:${c.color}" data-act="color" data-i="${i}" aria-label="變更「${esc(c.label)}」的顏色" title="點一下換顏色"></button>
     <input type="text" id="code-${i}" value="${esc(c.label)}" maxlength="20" data-field="label" data-i="${i}" aria-label="代碼 ${i + 1} 名稱" placeholder="代碼名稱">
-    <span class="seg" role="group" aria-label="記錄方式">
+    ${isITC(s) ? '<span></span>' : `<span class="seg" role="group" aria-label="記錄方式">
       <button type="button" data-act="kind" data-kind="duration" data-i="${i}" aria-pressed="${c.kind === 'duration'}">持續</button>
       <button type="button" data-act="kind" data-kind="event" data-i="${i}" aria-pressed="${c.kind === 'event'}">單次</button>
-    </span>
+    </span>`}
     <button class="icon-btn" data-act="del-code" data-i="${i}" aria-label="刪除「${esc(c.label)}」" ${s.codes.length <= 1 ? 'disabled' : ''}>×</button>
   </div>`).join('');
 }
@@ -302,6 +314,20 @@ function renderSetup() {
       </label>
       ${s.codes.length > (s.mode === 'DTC' ? 6 : 8) ? `<p class="hint">超過 ${s.mode === 'DTC' ? 6 : 8} 個按鈕時，手機直式畫面需要捲動${s.mode === 'DTC' ? '，文字框會被擠到下方' : ''}，建議改用平板或橫式。</p>` : ''}
     </section>` : ''}
+    ${isITC(s) ? itc.setupPanel(s) + `<section class="panel">
+      <header><h2>記錄類別</h2><span class="hint num" id="code-count">${s.codes.length} / ${MAX_CODES}</span></header>
+      <p class="hint">觀察每一位時，按下他符合的類別；預設是「學生在工作中」的六個類別。請用可以直接看到的外顯行為來定義每一類。點色塊可以換顏色。</p>
+      <div class="codes-edit" id="codes">${codesEditor(s)}</div>
+      <p class="err" id="code-err" hidden></p>
+      <div class="row">
+        <button class="btn sm" data-act="add-code" ${s.codes.length >= MAX_CODES ? 'disabled' : ''}>＋ 新增類別</button>
+        <label class="f" for="preset" style="flex-direction:row;align-items:center;gap:8px;margin-left:auto">套用
+          <select id="preset" style="min-height:36px;width:auto">
+            <option value="">選擇範本…</option>
+            ${ITC_PRESETS.map((p) => `<option value="${p.id}">${esc(p.name)}</option>`).join('')}
+          </select></label>
+      </div>
+    </section>` : ''}
     ${hasNotes(s) ? `<section class="panel">
       <h2>${s.mode === 'DTC' ? '文字記錄' : '記錄方式'}</h2>
       <p class="hint">開始打字的那一刻會自動記下「開始記錄時間」，送出時再記下「送出時間」，不用先按「輸入」。按 Enter 送出，Shift + Enter 換行，Ctrl + ;（分號）插入現在時刻。${s.mode === 'DTC' ? '打字時可用 Alt + 數字鍵 操作代碼按鈕，不必離開文字框。' : ''}</p>
@@ -329,7 +355,12 @@ function validateCodes(s) {
 
 async function toRecord() {
   const s = state.draft;
-  if (hasCodes(s)) {
+  if (isITC(s)) {
+    const msg = itc.readSetup(s);
+    if (msg) { const el = document.getElementById('itc-err'); el.textContent = msg; el.hidden = false; el.scrollIntoView({ block: 'center', behavior: 'smooth' }); return; }
+    await store.setSetting('lastITC', { n: s.itc.n, labels: s.itc.labels, interval: s.itc.interval });
+  }
+  if (hasCodes(s) || isITC(s)) {
     s.codes.forEach((c) => { c.label = c.label.trim(); });
     const msg = validateCodes(s);
     const el = document.getElementById('code-err');
@@ -506,12 +537,13 @@ function renderRecord() {
       <span class="wall num" id="wall" title="現在時刻">${clockHMS(Date.now())}</span>
       <span class="title">${esc(s.mode)} · ${esc(displayTitle(s))}</span>
     </div></header>
-    <main class="rec-main ${s.mode === 'DTC' ? 'dtc' : ''}" id="rec-main">${s.mode === 'UTC' ? utcBody(s) : s.mode === 'ATC' ? atcBody(s) : dtcBody(s)}</main>
-    <footer class="rec-bar"><div class="in" id="actions">${actionBar(s)}</div></footer>
+    <main class="rec-main ${s.mode === 'DTC' ? 'dtc' : ''} ${isITC(s) ? 'itc' : ''}" id="rec-main">${isITC(s) ? itc.body(s) : s.mode === 'UTC' ? utcBody(s) : s.mode === 'ATC' ? atcBody(s) : dtcBody(s)}</main>
+    <footer class="rec-bar"><div class="in" id="actions">${isITC(s) ? itc.actionBar(s) : actionBar(s)}</div></footer>
   </div>`;
   if (s.status === 'recording') startTick();
   if (isRunning(s)) keepAwake(true);
   if (hasNotes(s)) restoreDraft();
+  if (isITC(s)) itc.tick();
 }
 
 function dtcBody(s) {
@@ -549,6 +581,7 @@ function updateClock() {
   if (c) c.textContent = fmt(t);
   const w = document.getElementById('wall');
   if (w) w.textContent = clockHMS(Date.now());
+  if (isITC(s)) itc.tick();
   if (hasCodes(s)) {
     const open = openCodes(s);
     app.querySelectorAll('[data-live]').forEach((el) => {
@@ -564,6 +597,7 @@ function refreshRecord() {
   const st = document.getElementById('state');
   st.textContent = label;
   st.className = 'state ' + cls;
+  if (isITC(s)) { itc.refresh(); updateClock(); return; }
   if (app.querySelector('.rec.chat')) {
     document.getElementById('actions').innerHTML = topActions(s);
     refreshCodeViews();
@@ -609,9 +643,10 @@ async function startClock() {
   const s = state.s;
   s.clock.startedAt = Date.now();
   s.status = 'recording';
+  if (isITC(s)) itc.onStart(s);
+  startTick();
   try { await navigator.storage?.persist?.(); } catch (e) { /* 忽略 */ }
   await save();
-  startTick();
   keepAwake(true);
   if (app.querySelector('.rec.chat')) renderRecord();
   else refreshRecord();
@@ -641,7 +676,9 @@ async function endSession() {
   const pending = hasNotes(s) && document.getElementById('note-text')?.value.trim();
   const ok = await ask({
     title: '結束這場觀課？',
-    body: pending ? '文字框裡還有尚未送出的內容，結束時會自動送出。' : '結束後課堂時間停止，仍可在結果頁修改記錄。',
+    body: pending ? '文字框裡還有尚未送出的內容，結束時會自動送出。'
+      : isITC(s) ? '結束後停止取樣；目前這一位尚未記錄的觀察不會保存。仍可在結果頁修改每一筆記錄。'
+      : '結束後課堂時間停止，仍可在結果頁修改記錄。',
     ok: '結束觀課', danger: true,
   });
   if (!ok) return;
@@ -787,7 +824,7 @@ function renderResult() {
   const meta = (key, label, extra = '') => `<label class="f ${extra}" for="r-${key}">${label}
     <input type="${key === 'date' ? 'date' : 'text'}" id="r-${key}" data-rmeta="${key}" value="${esc(m[key])}" ${s.sample ? 'disabled' : ''}></label>`;
 
-  let body = '';
+  let body = isITC(s) ? itc.resultBody(s) : '';
   if (hasCodes(s)) {
     const st = stats(s);
     const max = Math.max(...st.map((r) => r.pct || 0), 0.0001);
@@ -809,7 +846,7 @@ function renderResult() {
     body += `<section class="panel"><header><h2>文字記錄</h2><span class="hint num">${notes(s).length} 則</span></header>
       <div class="feed" id="feed">${feedHTML(s, { editable: !s.sample, newestFirst: false })}</div></section>`;
   }
-  const tlHint = { UTC: '色帶是持續行為，菱形是單次標記', ATC: '圓點是送出時間，淡色線段是撰寫時間', DTC: '色帶是持續行為，菱形是單次標記，最下列圓點是文字記錄' }[s.mode];
+  const tlHint = { UTC: '色帶是持續行為，菱形是單次標記', ATC: '圓點是送出時間，淡色線段是撰寫時間', DTC: '色帶是持續行為，菱形是單次標記，最下列圓點是文字記錄', ITC: '每一欄是一輪，顏色比例是該輪各類別的人次' }[s.mode];
 
   app.innerHTML = `<div class="wrap">
     <div class="bar"><button class="back" data-act="home">‹ 首頁</button><h1>${esc(displayTitle(s))}</h1></div>
@@ -821,16 +858,17 @@ function renderResult() {
         <div><dt>開始時刻</dt><dd>${clockTime(s.clock.startedAt) || '—'}</dd></div>
         ${hasCodes(s) ? `<div><dt>標記次數</dt><dd>${s.events.filter((e) => e.type === 'on' || e.type === 'tap').length}</dd></div>` : ''}
         ${hasNotes(s) ? `<div><dt>記錄則數</dt><dd>${notes(s).length}</dd></div>` : ''}
+        ${isITC(s) ? itc.summaryItems(s) : ''}
       </dl>
     </section>
-    <section class="panel"><header><h2>時間軸</h2><span class="hint">${tlHint}</span></header>
+    <section class="panel"><header><h2>${isITC(s) ? '各輪分布' : '時間軸'}</h2><span class="hint">${tlHint}</span></header>
       <div class="tl" id="tl"></div></section>
     ${body}
     ${cloudPanel(s)}
     <section class="panel"><header><h2>匯出</h2><span class="hint">檔名只用英數字，任何系統都能正常開啟</span></header>
       <div class="exports">
         <button class="btn exp" data-act="exp-xlsx"><span>Excel 試算表</span><span class="fn">${n.xlsx}</span></button>
-        <button class="btn exp" data-act="exp-png"><span>時間軸圖片</span><span class="fn">${n.png}</span></button>
+        <button class="btn exp" data-act="exp-png"><span>${isITC(s) ? '分布圖與對象 × 輪圖片' : '時間軸圖片'}</span><span class="fn">${n.png}</span></button>
         <button class="btn exp" data-act="exp-json"><span>備份檔（可匯入其他裝置）</span><span class="fn">${n.json}</span></button>
       </div>
     </section>
@@ -980,6 +1018,16 @@ const actions = {
     if (el.classList.contains('chip')) document.getElementById('note-text')?.focus({ preventScroll: true });
   },
   undo: () => undoLast(),
+  'itc-pick': (el) => itc.pick(el.dataset.code),
+  'itc-next': () => itc.next(),
+  'itc-undo': () => itc.undo(),
+  async 'itc-cell'(el) {
+    if (await itc.editCell(el.dataset.id)) {
+      await save();
+      renderResult();
+      toast('已修改');
+    }
+  },
   send: () => sendNote(),
   stamp: () => insertStamp(),
   'reset-t0'() { setT0(nowT()); save(); document.getElementById('note-text')?.focus(); },
@@ -1051,6 +1099,7 @@ app.addEventListener('input', (e) => {
   const t = e.target;
   if (t.id === 'note-text') return onNoteInput(t);
   if (state.view === 'setup' && t.dataset.meta) state.draft.meta[t.dataset.meta] = t.value;
+  if (state.view === 'setup' && t.id?.startsWith('itc-')) itc.onSetupInput(t);
   if (state.view === 'setup' && t.dataset.field === 'label') {
     state.draft.codes[+t.dataset.i].label = t.value;
     document.getElementById('code-err').hidden = true;
@@ -1064,6 +1113,14 @@ app.addEventListener('input', (e) => {
 
 app.addEventListener('change', (e) => {
   const t = e.target;
+  if (t.id === 'preset' && t.value && isITC(state.draft)) {
+    const p = ITC_PRESETS.find((x) => x.id === t.value);
+    state.draft.codes = itcPresetCodes(p).map((c) => ({ id: 'c' + uid(), ...c }));
+    t.value = '';
+    refreshCodes();
+    toast(`已套用「${p.name}」`);
+    return;
+  }
   if (t.id === 'preset' && t.value) {
     const p = PRESETS.find((x) => x.id === t.value);
     state.draft.codes = p.codes.map(([label, kind], i) => ({ id: 'c' + uid(), label, kind, color: PALETTE[i] }));
@@ -1094,6 +1151,12 @@ document.addEventListener('keydown', (e) => {
     insertStamp();
     return;
   }
+  if (isITC(state.s)) {
+    // 用 Tab 移到按鈕上時，Enter 照常按下該按鈕；滑鼠點過留下的焦點則當作「下一位」
+    if (e.key === 'Enter' && t.matches?.('button, a') && (t.matches(':focus-visible') || t.closest('.modal'))) return;
+    if (itc.onKey(e, t.matches?.('input, textarea, select'))) e.preventDefault();
+    return;
+  }
   // 代碼按鈕：數字鍵（不在輸入框時），或 Alt + 數字鍵（打字中也能用）
   const digit = /^Digit[0-9]$/.test(e.code) ? +e.code.slice(5) : null;
   if (!hasCodes(state.s) || digit == null || e.ctrlKey || e.metaKey) return;
@@ -1111,6 +1174,8 @@ window.addEventListener('resize', () => {
 matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => { if (state.view === 'result') renderTimeline(); });
 
 // ---------- 啟動 ----------
+itc.init({ state, app, save, toast, esc, vibrate, nowT, parseLabels });
+
 (async () => {
   state.persistent = await store.ready();
   if (gd.available()) {

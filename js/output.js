@@ -1,5 +1,6 @@
 // 時間軸圖與匯出（xlsx／png／json）
-import { MODES, segments, stats, notes, totalSec, fmt, fmtHMS, fileBase, displayTitle, clockTime, APP_VERSION, wallTime, clockHMS } from './model.js';
+import { MODES, segments, stats, notes, totalSec, fmt, fmtHMS, fileBase, displayTitle, clockTime, APP_VERSION, wallTime, clockHMS,
+  itcStats, objName, objShort } from './model.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -24,6 +25,7 @@ function clip(text, maxUnits) {
  * colors: { ink, muted, line, accent, bg }，可用 CSS 變數字串（畫面）或實際色碼（匯出 PNG）
  */
 export function timelineSVG(s, width, colors, opts = {}) {
+  if (s.mode === 'ITC') return itcSVG(s, width, colors, opts);
   const W = Math.max(320, Math.round(width));
   const D = Math.max(totalSec(s), 60);
   const narrow = W < 560;
@@ -106,7 +108,7 @@ export async function timelinePNG(s) {
   // 匯出圖一律用淺色底，方便貼進報告
   const colors = { bg: '#FFFFFF', ink: '#17262A', muted: '#56686C', line: '#D3DCDA', accent: '#0F6E66' };
   const W = 1200;
-  const svg = timelineSVG(s, W, colors, { header: true });
+  const svg = timelineSVG(s, W, colors, { header: true, matrix: true });
   const img = new Image();
   img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
   await img.decode();
@@ -145,8 +147,15 @@ export function workbook(s) {
     ['暫停次數', s.clock.pauses.length],
     ['匯出程式版本', APP_VERSION],
   ];
+  if (s.mode === 'ITC') {
+    const st = itcStats(s);
+    info.splice(info.length - 1, 0,
+      ['觀察對象數', s.itc.n], ['取樣間隔', s.itc.interval ? `${s.itc.interval} 秒（自動倒數）` : '手動'],
+      ['輪數', st.rounds.length], ['觀察人次', st.total]);
+  }
   XLSX.utils.book_append_sheet(wb, sheet(XLSX, info, [24, 48]), '觀課資訊');
 
+  if (s.mode === 'ITC') { itcSheets(XLSX, wb, s); return wb; }
   if (s.mode !== 'ATC') {
     const st = stats(s);
     const rows = [['代碼', '類型', '次數', '總時長（秒）', '總時長', '占全課比例（%）', '平均每次（秒）', '每分鐘次數']];
@@ -213,3 +222,139 @@ export const names = (s) => {
   const b = fileBase(s);
   return { xlsx: `${b}.xlsx`, png: `${b}_timeline.png`, json: `${b}.json` };
 };
+
+// ================= ITC =================
+const NONE = '未記錄';
+
+function itcSheets(XLSX, wb, s) {
+  const st = itcStats(s);
+  const codeName = (id) => s.codes.find((c) => c.id === id)?.label ?? NONE;
+  const pct = (a, b) => (b ? Math.round((a / b) * 1000) / 10 : 0);
+
+  const sum = [['類別', '人次', '比例（%）']];
+  for (const r of st.byCode) sum.push([r.code.label, r.count, pct(r.count, st.total)]);
+  sum.push([NONE, st.none, pct(st.none, st.total)], ['合計', st.total, st.total ? 100 : 0]);
+  XLSX.utils.book_append_sheet(wb, sheet(XLSX, sum, [18, 8, 10]), '統計');
+
+  const rh = ['輪', '開始時刻', '結束時刻', '開始（課堂時間）', '結束（課堂時間）', ...s.codes.map((c) => c.label), NONE, '小計'];
+  const rr = st.rounds.map((r) => [r.round, clockHMS(wallTime(s, r.start)), clockHMS(wallTime(s, r.end)), fmtHMS(r.start), fmtHMS(r.end),
+    ...s.codes.map((c) => r.counts[c.id]), r.none, r.size]);
+  rr.push(['合計', '', '', '', '', ...st.byCode.map((x) => x.count), st.none, st.total]);
+  XLSX.utils.book_append_sheet(wb, sheet(XLSX, [rh, ...rr], [6, 10, 10, 14, 14, ...s.codes.map(() => 12), 8, 8]), '各輪');
+
+  // 對象 × 輪：每格是該輪的類別；右側是各類別人次
+  const head = ['對象', ...st.rounds.map((r) => `第${r.round}輪`), ...s.codes.map((c) => c.label), NONE, '合計'];
+  const grid = st.perObj.map((o) => {
+    const cells = st.rounds.map((r) => { const e = r.items.find((x) => x.obj === o.i); return e ? codeName(e.code) : ''; });
+    return [o.name, ...cells, ...s.codes.map((c) => o.counts[c.id]), o.none, o.total];
+  });
+  XLSX.utils.book_append_sheet(wb, sheet(XLSX, [head, ...grid], [10, ...st.rounds.map(() => 12), ...s.codes.map(() => 12), 8, 8]), '對象x輪');
+
+  const dh = ['序', '輪', '對象', '類別', '觀察開始（課堂時間）', '記錄（課堂時間）', '觀察開始時刻', '記錄時刻', '開始（秒）', '記錄（秒）'];
+  const dr = st.rounds.flatMap((r) => r.items).map((e, i) => [i + 1, e.round, objName(s, e.obj), codeName(e.code),
+    fmtHMS(e.t0 ?? e.t), fmtHMS(e.t), clockHMS(wallTime(s, e.t0 ?? e.t)), clockHMS(wallTime(s, e.t)),
+    Math.round((e.t0 ?? e.t) * 10) / 10, Math.round(e.t * 10) / 10]);
+  XLSX.utils.book_append_sheet(wb, sheet(XLSX, [dh, ...dr], [6, 6, 10, 16, 16, 14, 12, 10, 10, 10]), '明細');
+}
+
+const textW = (t, size) => [...String(t)].reduce((w, ch) => w + (/[\u0000-\u00ff]/.test(ch) ? 0.58 : 1) * size, 0);
+
+/** ITC 圖：上方圖例＋各輪類別分布（100% 堆疊長條）；opts.matrix 時下方加「對象 × 輪」格子圖（匯出圖片用） */
+function itcSVG(s, width, colors, opts = {}) {
+  const st = itcStats(s);
+  const W = Math.max(320, Math.round(width));
+  const font = opts.font || 'system-ui, -apple-system, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif';
+  const L = 44, R = 16;
+  const parts = [];
+  let y = 0;
+
+  if (opts.header) {
+    const sub = [`${MODES.ITC.tag} ${MODES.ITC.name}`, s.meta.date, clockTime(s.clock.startedAt) && '開始 ' + clockTime(s.clock.startedAt),
+      `${s.itc.n} 位對象`, s.itc.interval ? `每位 ${s.itc.interval} 秒` : '手動取樣', `${st.rounds.length} 輪`, `${st.total} 人次`].filter(Boolean).join('　');
+    parts.push(`<text x="16" y="26" font-size="17" font-weight="700" fill="${colors.ink}">${esc(displayTitle(s))}</text>`);
+    parts.push(`<text x="16" y="46" font-size="12.5" fill="${colors.muted}">${esc(sub)}</text>`);
+    y = 64;
+  }
+
+  // 圖例（自動換行）
+  const items = [...s.codes.map((c, i) => ({ label: `${i + 1} ${c.label}`, color: c.color })), { label: NONE, color: null }];
+  let lx = 16, ly = y + 16;
+  for (const it of items) {
+    const w = 14 + 6 + textW(it.label, 12) + 18;
+    if (lx + w > W - R && lx > 16) { lx = 16; ly += 22; }
+    parts.push(it.color
+      ? `<rect x="${lx}" y="${ly - 10}" width="14" height="14" rx="3" fill="${it.color}"/>`
+      : `<rect x="${lx + 0.5}" y="${ly - 9.5}" width="13" height="13" rx="3" fill="none" stroke="${colors.muted}" stroke-dasharray="2 2"/>`);
+    parts.push(`<text x="${lx + 20}" y="${ly + 1}" font-size="12" fill="${colors.ink}">${esc(it.label)}</text>`);
+    lx += w;
+  }
+  y = ly + 18;
+
+  // 各輪分布
+  const top = y + 8, ph = 150, bottom = top + ph;
+  const R0 = Math.max(st.rounds.length, 1);
+  const plotW = W - L - R;
+  const band = plotW / R0;
+  const bw = Math.max(4, Math.min(48, band * 0.72));
+  for (const p of [0, 0.5, 1]) {
+    const yy = bottom - p * ph;
+    parts.push(`<line x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}" stroke="${colors.line}"/>`);
+    parts.push(`<text x="${L - 6}" y="${yy + 4}" font-size="11" fill="${colors.muted}" text-anchor="end">${p * 100}%</text>`);
+  }
+  const every = Math.max(1, Math.ceil(R0 / Math.floor(plotW / 34)));
+  st.rounds.forEach((r, k) => {
+    const cx = L + band * (k + 0.5);
+    let acc = 0;
+    const segs = [...s.codes.map((c) => ({ n: r.counts[c.id], color: c.color, label: c.label })), { n: r.none, color: null, label: NONE }];
+    for (const g of segs) {
+      if (!g.n) continue;
+      const h = (g.n / r.size) * ph;
+      const yy = bottom - acc - h;
+      parts.push(g.color
+        ? `<rect x="${(cx - bw / 2).toFixed(1)}" y="${yy.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" fill="${g.color}"><title>第${r.round}輪 ${esc(g.label)} ${g.n} 人次</title></rect>`
+        : `<rect x="${(cx - bw / 2 + 0.5).toFixed(1)}" y="${(yy + 0.5).toFixed(1)}" width="${(bw - 1).toFixed(1)}" height="${Math.max(0, h - 1).toFixed(1)}" fill="none" stroke="${colors.muted}" stroke-dasharray="2 2"><title>第${r.round}輪 ${NONE} ${g.n} 人次</title></rect>`);
+      acc += h;
+    }
+    if (!r.complete) parts.push(`<text x="${cx}" y="${top - 4}" font-size="10.5" fill="${colors.muted}" text-anchor="middle">${r.size}/${s.itc.n}</text>`);
+    if (k % every === 0 || k === R0 - 1) {
+      parts.push(`<text x="${cx}" y="${bottom + 16}" font-size="11.5" font-weight="600" fill="${colors.ink}" text-anchor="middle">${r.round}</text>`);
+      parts.push(`<text x="${cx}" y="${bottom + 31}" font-size="10.5" fill="${colors.muted}" text-anchor="middle">${clockTime(wallTime(s, r.start))}</text>`);
+    }
+  });
+  parts.push(`<text x="${L}" y="${bottom + 48}" font-size="11" fill="${colors.muted}">輪次（下方為該輪開始時刻）</text>`);
+  y = bottom + 60;
+
+  // 對象 × 輪 格子圖
+  if (opts.matrix && st.rounds.length) {
+    const nameW = Math.min(110, Math.max(36, ...st.perObj.map((o) => textW(o.name, 12))) + 12);
+    const cw = Math.max(12, Math.min(30, (W - 16 - nameW - R) / R0));
+    const ch = 20;
+    parts.push(`<text x="16" y="${y + 14}" font-size="13" font-weight="700" fill="${colors.ink}">對象 × 輪</text>`);
+    y += 26;
+    st.rounds.forEach((r, k) => {
+      if (k % Math.max(1, Math.ceil(16 / cw)) === 0) parts.push(`<text x="${16 + nameW + cw * (k + 0.5)}" y="${y + 10}" font-size="10.5" fill="${colors.muted}" text-anchor="middle">${r.round}</text>`);
+    });
+    y += 16;
+    st.perObj.forEach((o, row) => {
+      const yy = y + row * ch;
+      parts.push(`<text x="${16 + nameW - 8}" y="${yy + 14}" font-size="12" fill="${colors.ink}" text-anchor="end">${esc(o.name)}</text>`);
+      st.rounds.forEach((r, k) => {
+        const e = r.items.find((x) => x.obj === o.i);
+        const x = 16 + nameW + cw * k;
+        if (!e) return;
+        const ci = s.codes.findIndex((c) => c.id === e.code);
+        if (ci < 0) {
+          parts.push(`<rect x="${x + 1.5}" y="${yy + 2.5}" width="${cw - 3}" height="${ch - 5}" rx="2" fill="none" stroke="${colors.muted}" stroke-dasharray="2 2"/>`);
+        } else {
+          parts.push(`<rect x="${x + 1}" y="${yy + 2}" width="${cw - 2}" height="${ch - 4}" rx="2" fill="${s.codes[ci].color}"/>`);
+          if (cw >= 16) parts.push(`<text x="${x + cw / 2}" y="${yy + 14}" font-size="10.5" font-weight="700" fill="#fff" text-anchor="middle">${ci + 1}</text>`);
+        }
+      });
+    });
+    y += st.perObj.length * ch + 12;
+  }
+
+  const H = Math.round(y);
+  const bg = opts.header ? `<rect x="0" y="0" width="${W}" height="${H}" fill="${colors.bg}"/>` : '';
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family='${font}' role="img" aria-label="${esc(displayTitle(s))} 各輪類別分布">${bg}${parts.join('')}</svg>`;
+}

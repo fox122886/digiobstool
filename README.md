@@ -1,4 +1,4 @@
-# 數位觀課工具 2.0（UTC／ATC／DTC）
+# 數位觀課工具 2.0（UTC／ATC／DTC／ITC）
 
 國立臺灣師範大學師資培育學院 張民杰教授團隊的數位觀課工具改版。
 可離線使用的網頁 APP（PWA），每個動作即時存在使用者的裝置上。
@@ -14,8 +14,9 @@
 - **UTC 通用時間線標記**：1–12 個自訂代碼按鈕，可設為「持續」（按開始／再按結束）或「單次」（按一下記一次）。
 - **ATC 軼事記錄時間線標記**：開始打字即記下開始時間，送出時記下送出時間。
 - **DTC 質量雙元時間線標記**：UTC 按鈕與 ATC 文字並用；匯出時標出每則文字撰寫期間進行中的代碼。
+- **ITC 間隔時間線標記**：時間抽樣（「在工作中」觀察），輪流觀察 1–60 位對象，間隔可手動或自動倒數 3–30 秒；結果有各輪分布圖與可修改的對象 × 輪表。
 
-鍵盤操作（電腦）：數字鍵 1–0 對應代碼按鈕；打字時用 Alt + 數字鍵；Enter 送出文字、Shift + Enter 換行、Ctrl + ; 插入現在時刻。
+鍵盤操作（電腦）：數字鍵 1–0 對應代碼按鈕；打字時用 Alt + 數字鍵；Enter 送出文字、Shift + Enter 換行、Ctrl + ; 插入現在時刻。ITC 用數字鍵選類別、Enter 記錄並換下一位。
 
 ## 檔案結構
 
@@ -29,6 +30,7 @@ js/app.js              畫面與操作
 js/model.js            資料模型、計時、統計（純函式）
 js/output.js           時間軸圖、Excel／PNG／JSON 匯出
 js/store.js            IndexedDB 本機資料庫
+js/itc.js              ITC 時間抽樣的記錄與結果畫面
 js/gdrive.js           Google 雲端硬碟同步（drive.file 權限）
 privacy.html           隱私權政策
 vendor/xlsx.full.min.js SheetJS 0.18.5（Apache 2.0）
@@ -70,6 +72,7 @@ python -m http.server 8000
 | `on` / `off` | `code`, `t` | 持續型代碼開始／結束 |
 | `tap` | `code`, `t` | 單次型代碼 |
 | `note` | `t0`, `t`, `text` | 軼事記錄（開始輸入時間、送出時間） |
+| `sample` | `round`, `obj`, `code`, `t0`, `t` | ITC 取樣（`code` 為 null 表示未記錄） |
 
 `t` 是扣除暫停後的課堂經過秒數，由 `clock.startedAt` 與 `clock.pauses` 推算。
 
