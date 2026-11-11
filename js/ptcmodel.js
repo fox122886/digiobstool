@@ -20,11 +20,13 @@ const NUMBERED = new Set(['talk', 'ask']);
 // ---------- 版面範本 ----------
 let seatNo = 0;
 const seats = (n) => Array.from({ length: n }, () => ({ id: uid(), label: String(++seatNo), sex: '' }));
-const group = (x, y, sr, sc, label) => ({ id: uid(), kind: 'group', x, y, sr, sc, w: sc, h: sr, label, seats: seats(sr * sc) });
+// 小組桌：n 人排成 sr 排，每排 ceil(n / sr) 個位置；人數不整齊時（例如 5 人 2 排）最後一格留空
+const group = (x, y, sr, sc, label, n = sr * sc) => ({ id: uid(), kind: 'group', x, y, sr, sc, w: sc, h: sr, label, seats: seats(n) });
 const area = (x, y, w, h, label) => ({ id: uid(), kind: 'area', x, y, w, h, label });
 
 export const ROOM_TEMPLATES = [
   ['groups', '分組（6 組 × 4 人）'],
+  ['groups5', '分組（6 組 × 5 人）'],
   ['rows', '排排坐（5 排 × 6 人）'],
   ['open', '開放式（小組桌＋學習區）'],
 ];
@@ -45,6 +47,11 @@ export function makeRoom(tpl = 'groups') {
         group(11, 8, 2, 3, '第 4 組'), group(4, 10, 2, 3, '第 5 組'), group(11, 11, 2, 3, '第 6 組'),
       ],
     };
+  }
+  if (tpl === 'groups5') {
+    const items = [area(7, 0, 6, 1, '講台'), area(19, 1, 1, 2, '門')];
+    [[2, 3], [8, 3], [14, 3], [2, 8], [8, 8], [14, 8]].forEach(([x, y], i) => items.push(group(x, y, 2, 3, `第 ${i + 1} 組`, 5)));
+    return { w: 20, h: 12, items };
   }
   const items = [area(6, 0, 6, 1, '講台'), area(17, 1, 1, 2, '門')];
   [[2, 3], [8, 3], [14, 3], [2, 8], [8, 8], [14, 8]].forEach(([x, y], i) => items.push(group(x, y, 2, 2, `第 ${i + 1} 組`)));
@@ -162,6 +169,8 @@ const SEX_COLOR = { M: '#2F6FB3', F: '#C2572B' };
 const T_COLOR = '#17262A';
 export function mapSVG(s, width, colors, opts = {}) {
   const room = s.ptc.room;
+  // 線條與符號一律跟著主題的文字色，深色模式下才看得清楚
+  const TC = colors.ink || T_COLOR, BG = colors.bg || '#fff', WARN = colors.warn || '#9A6B00';
   const pad = 14;
   const headH = opts.header ? 56 : 0;
   const legendH = opts.legend === false ? 0 : 66;
@@ -173,7 +182,7 @@ export function mapSVG(s, width, colors, opts = {}) {
   const esc = (x) => String(x ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const p = [];
   p.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" font-family="'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif" role="img" aria-label="教師移動路線圖">`);
-  p.push(`<defs><marker id="ar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="${Math.max(5, u / 6)}" markerHeight="${Math.max(5, u / 6)}" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="${T_COLOR}"/></marker></defs>`);
+  p.push(`<defs><marker id="ar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="${Math.max(5, u / 6)}" markerHeight="${Math.max(5, u / 6)}" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="${TC}"/></marker></defs>`);
   p.push(`<rect width="${W}" height="${H}" fill="${colors.bg || '#fff'}"/>`);
   if (opts.header) {
     p.push(`<text x="16" y="26" font-size="17" font-weight="700" fill="${colors.ink}">${esc(s.meta.title || '教師移動')}</text>`);
@@ -231,19 +240,19 @@ export function mapSVG(s, width, colors, opts = {}) {
         const fade = opts.live && b.t < recent;
         // 箭頭畫在線段中間（同紙本記法），避免和停留點重疊
         const mx = ((+X(a.x) + +X(b.x)) / 2).toFixed(1), my = ((+Y(a.y) + +Y(b.y)) / 2).toFixed(1);
-        p.push(`<path d="M${X(a.x)},${Y(a.y)} L${mx},${my} L${X(b.x)},${Y(b.y)}" fill="none" stroke="${T_COLOR}" stroke-opacity="${fade ? 0.28 : 0.9}" stroke-width="2" marker-mid="url(#ar)"><title>${fmt(a.t)} → ${fmt(b.t)}</title></path>`);
+        p.push(`<path d="M${X(a.x)},${Y(a.y)} L${mx},${my} L${X(b.x)},${Y(b.y)}" fill="none" stroke="${TC}" stroke-opacity="${fade ? 0.28 : 0.9}" stroke-width="2" marker-mid="url(#ar)"><title>${fmt(a.t)} → ${fmt(b.t)}</title></path>`);
       }
     }
     pts.forEach((q, i) => {
       const last = i === pts.length - 1;
       if (q.no) {
         const r = Math.max(8, Math.min(13, u * 0.36));
-        p.push(`<circle cx="${X(q.x)}" cy="${Y(q.y)}" r="${r}" fill="${colors.bg || '#fff'}" stroke="${q.k === 'ask' ? '#9A6B00' : T_COLOR}" stroke-width="1.8"><title>${q.no}. ${kindName(q.k)} ${fmt(q.t)}（停留 ${fmt(q.dur)}）</title></circle>`);
-        p.push(`<text x="${X(q.x)}" y="${(+Y(q.y) + 4).toFixed(1)}" font-size="${Math.round(r * 0.95)}" font-weight="700" text-anchor="middle" fill="${q.k === 'ask' ? '#9A6B00' : T_COLOR}" pointer-events="none">${q.no}</text>`);
+        p.push(`<circle cx="${X(q.x)}" cy="${Y(q.y)}" r="${r}" fill="${colors.bg || '#fff'}" stroke="${q.k === 'ask' ? WARN : TC}" stroke-width="1.8"><title>${q.no}. ${kindName(q.k)} ${fmt(q.t)}（停留 ${fmt(q.dur)}）</title></circle>`);
+        p.push(`<text x="${X(q.x)}" y="${(+Y(q.y) + 4).toFixed(1)}" font-size="${Math.round(r * 0.95)}" font-weight="700" text-anchor="middle" fill="${q.k === 'ask' ? WARN : TC}" pointer-events="none">${q.no}</text>`);
       } else if (q.k === 'watch' || q.k === 'class') {
-        p.push(`<rect x="${(+X(q.x) - 5).toFixed(1)}" y="${(+Y(q.y) - 5).toFixed(1)}" width="10" height="10" fill="${q.k === 'class' ? T_COLOR : colors.bg || '#fff'}" stroke="${T_COLOR}" stroke-width="1.6" transform="rotate(45 ${X(q.x)} ${Y(q.y)})"><title>${kindName(q.k)} ${fmt(q.t)}（停留 ${fmt(q.dur)}）</title></rect>`);
+        p.push(`<rect x="${(+X(q.x) - 5).toFixed(1)}" y="${(+Y(q.y) - 5).toFixed(1)}" width="10" height="10" fill="${q.k === 'class' ? TC : colors.bg || '#fff'}" stroke="${TC}" stroke-width="1.6" transform="rotate(45 ${X(q.x)} ${Y(q.y)})"><title>${kindName(q.k)} ${fmt(q.t)}（停留 ${fmt(q.dur)}）</title></rect>`);
       } else {
-        p.push(`<circle cx="${X(q.x)}" cy="${Y(q.y)}" r="2.6" fill="${T_COLOR}"/>`);
+        p.push(`<circle cx="${X(q.x)}" cy="${Y(q.y)}" r="2.6" fill="${TC}"/>`);
       }
       if (last && opts.live) p.push(`<circle cx="${X(q.x)}" cy="${Y(q.y)}" r="${Math.max(10, u * 0.4)}" fill="none" stroke="${colors.accent || '#0F6E66'}" stroke-width="3"><animate attributeName="r" values="${Math.max(10, u * 0.4)};${Math.max(14, u * 0.55)};${Math.max(10, u * 0.4)}" dur="1.4s" repeatCount="indefinite"/></circle>`);
       if (i === 0 && !opts.live) p.push(`<text x="${(+X(q.x) + 8).toFixed(1)}" y="${(+Y(q.y) - 8).toFixed(1)}" font-size="11" font-weight="700" fill="${colors.accent || '#0F6E66'}">起點</text>`);
@@ -257,10 +266,10 @@ export function mapSVG(s, width, colors, opts = {}) {
       p.push(svg(lx, ly) + `<text x="${lx + 34}" y="${ly + 4}" font-size="11.5" fill="${colors.ink}">${label}</text>`);
       lx += w;
     };
-    item((x, y) => `<line x1="${x}" y1="${y}" x2="${x + 26}" y2="${y}" stroke="${T_COLOR}" stroke-width="2" marker-end="url(#ar)"/>`, '教師移動');
-    item((x, y) => `<circle cx="${x + 13}" cy="${y}" r="8" fill="#fff" stroke="${T_COLOR}" stroke-width="1.6"/><text x="${x + 13}" y="${y + 4}" font-size="9" font-weight="700" text-anchor="middle">1</text>`, '學生—教師討論（順序）');
-    item((x, y) => `<rect x="${x + 8}" y="${y - 5}" width="10" height="10" fill="#fff" stroke="${T_COLOR}" stroke-width="1.5" transform="rotate(45 ${x + 13} ${y})"/>`, '停留觀察');
-    item((x, y) => `<rect x="${x + 8}" y="${y - 5}" width="10" height="10" fill="${T_COLOR}" transform="rotate(45 ${x + 13} ${y})"/>`, '全班講解');
+    item((x, y) => `<line x1="${x}" y1="${y}" x2="${x + 26}" y2="${y}" stroke="${TC}" stroke-width="2" marker-end="url(#ar)"/>`, '教師移動');
+    item((x, y) => `<circle cx="${x + 13}" cy="${y}" r="8" fill="${BG}" stroke="${TC}" stroke-width="1.6"/><text x="${x + 13}" y="${y + 4}" font-size="9" font-weight="700" text-anchor="middle" fill="${TC}">1</text>`, '學生—教師討論（順序）');
+    item((x, y) => `<rect x="${x + 8}" y="${y - 5}" width="10" height="10" fill="${BG}" stroke="${TC}" stroke-width="1.5" transform="rotate(45 ${x + 13} ${y})"/>`, '停留觀察');
+    item((x, y) => `<rect x="${x + 8}" y="${y - 5}" width="10" height="10" fill="${TC}" transform="rotate(45 ${x + 13} ${y})"/>`, '全班講解');
     if (sEvents(s).length) {
       item((x, y) => `<path d="M${x},${y - 3} l6,6 m0,-6 l-6,6 M${x + 10},${y - 3} l6,6 m0,-6 l-6,6 M${x + 20},${y - 3} l6,6 m0,-6 l-6,6" stroke="${colors.muted}" stroke-width="1.3"/>`, '學生直接移動');
       item((x, y) => `<line x1="${x}" y1="${y}" x2="${x + 26}" y2="${y}" stroke="${colors.muted}" stroke-width="1.6" stroke-dasharray="7 5"/>`, '學生有目的的移動');

@@ -52,8 +52,10 @@ function toolsHTML(s) {
   if (!it) return `<p class="hint">拖動桌子或區域可以移動位置；點一下選取後，可以改名稱、大小或刪除。</p>${add}`;
   const btn = (d, label, aria) => `<button class="btn sm sq" data-act="ptc-size" data-d="${d}" aria-label="${aria}">${label}</button>`;
   const size = it.kind === 'group'
-    ? `<span class="lab">座位</span>${btn('sr-', '−', '少一排')}<span class="num">${it.sr} 排</span>${btn('sr+', '＋', '多一排')}${btn('sc-', '−', '每排少一位')}<span class="num">每排 ${it.sc}</span>${btn('sc+', '＋', '每排多一位')}`
-    : `<span class="lab">大小</span>${btn('w-', '−', '變窄')}<span class="num">寬 ${it.w}</span>${btn('w+', '＋', '變寬')}${btn('h-', '−', '變矮')}<span class="num">深 ${it.h}</span>${btn('h+', '＋', '變深')}`;
+    ? `<span class="lab">人數</span>${btn('n-', '−', '少一人')}<span class="num">${it.seats.length} 人</span>${btn('n+', '＋', '多一人')}</div>
+      <div class="row ptc-size"><span class="lab">排成</span>${btn('sr-', '−', '少一排')}<span class="num">${it.sr} 排</span>${btn('sr+', '＋', '多一排')}<span class="hint">${it.seats.length % it.sr ? '人數不整齊時，最後一格留空' : ''}</span>`
+    : `<span class="lab">寬</span>${btn('w-', '−', '變窄')}<span class="num">${it.w} 格</span>${btn('w+', '＋', '變寬')}</div>
+      <div class="row ptc-size"><span class="lab">深</span>${btn('h-', '−', '變淺')}<span class="num">${it.h} 格</span>${btn('h+', '＋', '變深')}`;
   return `<div class="ptc-sel">
       <label class="f" for="ptc-name">${it.kind === 'area' ? '區域名稱' : '桌名（例如 第 1 組）'}<input type="text" id="ptc-name" value="${esc(it.label)}" maxlength="12"></label>
       <div class="row ptc-size">${size}</div>
@@ -186,14 +188,17 @@ export function onInput(t) {
 
 function sizeItem(it, d, room) {
   const k = d.slice(0, -1), up = d.endsWith('+');
-  if (k === 'sr' || k === 'sc') {
-    const nv = Math.max(1, Math.min(4, it[k] + (up ? 1 : -1)));
-    if (nv === it[k]) return;
+  if (k === 'n' || k === 'sr') {
+    // 人數 1–12、排數 1–4；每排的位置數自動算，人數不整齊時最後一格留空
+    let n = it.seats.length, sr = it.sr;
+    if (k === 'n') n = Math.max(1, Math.min(12, n + (up ? 1 : -1)));
+    else sr = Math.max(1, Math.min(4, n, sr + (up ? 1 : -1)));
+    sr = Math.min(sr, n);
+    if (n === it.seats.length && sr === it.sr) return;
     const old = it.seats;
-    it[k] = nv; it.w = it.sc; it.h = it.sr;
-    const n = it.sr * it.sc;
     let next = Math.max(0, ...allSeats(room).map((x) => +x.label || 0));
     it.seats = Array.from({ length: n }, (_, i) => old[i] || { id: uid(), label: String(++next), sex: '' });
+    it.sr = sr; it.sc = Math.ceil(n / sr); it.w = it.sc; it.h = it.sr;
   } else if (k === 'w' || k === 'h') it[k] = Math.max(1, Math.min(room[k] , it[k] + (up ? 1 : -1)));
   else it[k] += up ? 1 : -1;
   it.x = Math.max(0, Math.min(it.x, room.w - it.w));

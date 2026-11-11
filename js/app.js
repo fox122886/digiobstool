@@ -202,6 +202,7 @@ async function renderHome() {
 
   app.innerHTML = `<div class="wrap">
     <div class="brand">
+      <button type="button" class="theme-btn" data-theme-toggle>${window.obsTheme ? window.obsTheme.label().html : ''}</button>
       ${TOOL ? `<p class="small"><a href="./">‹ 數位觀課工具</a></p><h1><span class="num">${TOOL}</span> ${TOOL_INFO[TOOL].name}</h1>
       <p class="muted">可離線使用，每個動作都即時存在這台裝置上。<a class="guide-link" href="guide.html#${TOOL.toLowerCase()}">${TOOL} 操作說明 →</a></p>`
       : `<h1>數位觀課工具</h1>
@@ -840,7 +841,7 @@ function insertStamp() {
 
 // ---------- 結果頁 ----------
 function themeColors() {
-  return { ink: 'var(--ink)', muted: 'var(--muted)', line: 'var(--line)', accent: 'var(--accent)', bg: 'var(--surface)' };
+  return { ink: 'var(--ink)', muted: 'var(--muted)', line: 'var(--line)', accent: 'var(--accent)', bg: 'var(--surface)', warn: 'var(--warn)' };
 }
 
 function renderTimeline() {
@@ -1215,6 +1216,7 @@ window.addEventListener('resize', () => {
   resizeTimer = setTimeout(() => { if (state.view === 'result') renderTimeline(); }, 150);
 });
 matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => { if (state.view === 'result') renderTimeline(); });
+document.documentElement.addEventListener('obs-theme', () => { if (state.view === 'result') renderTimeline(); });
 
 // ---------- 啟動 ----------
 itc.init({ state, app, save, toast, esc, vibrate, nowT, parseLabels, ask });

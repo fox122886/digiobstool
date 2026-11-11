@@ -504,3 +504,15 @@ body:has(.rec.chat) #toast { bottom: calc(var(--bar, 120px) + var(--kb, 0px) + 1
 ul.facts { margin: 4px 0 0; padding-left: 1.2em; font-size: .85rem; color: var(--muted); font-weight: 400; }
 .ptc-a-text { display: block; box-sizing: border-box; margin: 2px 0 8px 30px; width: calc(100% - 30px); }
 tr.muted-row td { color: var(--muted); }
+
+/* 淺色／深色切換鈕 */
+.brand, .g header.top { position: relative; }
+.theme-btn {
+  position: absolute; top: 0; right: 0; display: inline-flex; align-items: center; gap: 6px;
+  min-height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface);
+  color: var(--ink); font: inherit; font-size: .82rem; font-weight: 600; cursor: pointer;
+}
+.theme-btn.static { position: static; }
+.theme-btn:hover { background: var(--sunken); }
+.theme-btn svg { color: var(--accent); }
+.brand h1, .brand > p.small { padding-right: 112px; }

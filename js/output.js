@@ -108,7 +108,7 @@ export function download(blob, name) {
 // ---------- PNG ----------
 export async function timelinePNG(s) {
   // 匯出圖一律用淺色底，方便貼進報告
-  const colors = { bg: '#FFFFFF', ink: '#17262A', muted: '#56686C', line: '#D3DCDA', accent: '#0F6E66' };
+  const colors = { bg: '#FFFFFF', ink: '#17262A', muted: '#56686C', line: '#D3DCDA', accent: '#0F6E66', warn: '#9A6400' };
   const W = 1200;
   const svg = timelineSVG(s, W, colors, { header: true, matrix: true });
   const img = new Image();

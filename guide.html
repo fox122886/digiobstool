@@ -2,6 +2,7 @@
 <html lang="zh-Hant-TW">
 <head>
 <meta charset="utf-8">
+<script src="theme.js"></script>
 <!-- Google Analytics（GA4）：只在正式網址載入，本機測試與預覽不送資料 -->
 <script>
 (function (w, d, h) {
@@ -25,7 +26,7 @@
 <style>
   /* 指引頁：單欄閱讀版面，手機截圖置中、電腦截圖滿版 */
   .g { max-width: 760px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 16px 64px; }
-  .g header.top { display: flex; flex-direction: column; gap: 6px; padding-block: 8px 20px; border-bottom: 1px solid var(--line); }
+  .g header.top { position: relative; display: flex; flex-direction: column; gap: 6px; padding-block: 8px 20px; border-bottom: 1px solid var(--line); }
   .g header.top .eyebrow { font-size: .8rem; letter-spacing: .08em; color: var(--accent); font-weight: 700; }
   .g header.top h1 { font-size: 1.7rem; }
   .g header.top .row { margin-top: 8px; }
@@ -63,6 +64,7 @@
 <body>
 <main class="g">
   <header class="top">
+    <button type="button" class="theme-btn" data-theme-toggle></button>
     <h1>操作指引</h1>
     <p class="muted">UTC 通用時間線標記、ATC 軼事記錄時間線標記、DTC 質量雙元時間線標記、ITC 間隔時間線標記</p>
     <div class="row"><a class="btn primary sm" href="./">開啟數位觀課工具</a><span class="small muted url">fox122886.github.io/digiobstool</span></div>
