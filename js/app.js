@@ -7,6 +7,7 @@ import {
 import * as itc from './itc.js';
 import * as ptc from './ptc.js';
 import { makeRoom, samplePTC } from './ptcmodel.js';
+import { gifBlob, videoBlob } from './anim.js';
 import { TOOL, track } from './analytics.js';
 import { timelineSVG, download, timelinePNG, xlsxBlob, jsonBlob, names } from './output.js';
 import * as gd from './gdrive.js';
@@ -906,6 +907,10 @@ function renderResult() {
       <div class="exports">
         <button class="btn exp" data-act="exp-xlsx"><span>Excel 試算表</span><span class="fn">${n.xlsx}</span></button>
         <button class="btn exp" data-act="exp-png"><span>${isITC(s) ? '分布圖與對象 × 輪圖片' : isPTC(s) ? '路線圖（原始觀察記錄）' : '時間軸圖片'}</span><span class="fn">${n.png}</span></button>
+        ${isPTC(s) ? `<label class="f anim-len" for="anim-sec">路線動畫長度（整節課壓縮成）<select id="anim-sec">
+          <option value="10">10 秒</option><option value="20" selected>20 秒</option><option value="30">30 秒</option><option value="60">60 秒</option></select></label>
+        <button class="btn exp" data-act="exp-mp4"><span>路線動畫影片（MP4）</span><span class="fn">${n.mp4}</span></button>
+        <button class="btn exp" data-act="exp-gif"><span>路線動畫（GIF）</span><span class="fn">${n.gif}</span></button>` : ''}
         <button class="btn exp" data-act="exp-json"><span>備份檔（可匯入其他裝置）</span><span class="fn">${n.json}</span></button>
       </div>
     </section>
@@ -945,6 +950,44 @@ async function exportFile(kind) {
     track('obs_export', { tool: s.mode, format: kind, sample: s.sample ? 'yes' : 'no' });
   } catch (e) {
     toast('匯出失敗：' + (e?.message || e), 5000);
+  }
+}
+
+// PTC 路線動畫：MP4 給簡報與投影，GIF 給 LINE 或文件
+async function exportAnim(kind) {
+  const s = state.s;
+  const n = names(s);
+  const seconds = +(document.getElementById('anim-sec')?.value || 20);
+  const ctl = new AbortController();
+  const wrap = document.createElement('div');
+  wrap.className = 'modal-wrap';
+  wrap.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-labelledby="anim-h">
+    <h2 id="anim-h">產生${kind === 'gif' ? ' GIF ' : '影片'}中…</h2>
+    <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span style="width:0%"></span></div>
+    <p class="hint num" id="anim-p">0%</p>
+    <p class="hint">產生期間請停留在這個畫面${kind === 'gif' ? '' : '（部分瀏覽器需要即時錄製，時間約等於影片長度）'}。</p>
+    <div class="modal-actions"><button class="btn" data-v="cancel">取消</button></div></div>`;
+  wrap.querySelector('[data-v="cancel"]').addEventListener('click', () => ctl.abort());
+  document.body.appendChild(wrap);
+  const bar = wrap.querySelector('.progress span'), pbox = wrap.querySelector('.progress'), pct = wrap.querySelector('#anim-p');
+  const onProgress = (f) => { const v = Math.round(f * 100); bar.style.width = v + '%'; pbox.setAttribute('aria-valuenow', v); pct.textContent = v + '%'; };
+  keepAwake(true);
+  try {
+    if (kind === 'gif') {
+      const blob = await gifBlob(s, { seconds, onProgress, signal: ctl.signal });
+      download(blob, n.gif);
+      toast(`已匯出 ${n.gif}（${(blob.size / 1048576).toFixed(1)} MB）`, 4000);
+    } else {
+      const { blob, ext } = await videoBlob(s, { seconds, onProgress, signal: ctl.signal });
+      download(blob, n[ext]);
+      toast(ext === 'mp4' ? `已匯出 ${n.mp4}（${(blob.size / 1048576).toFixed(1)} MB）` : `這個瀏覽器只能產生 WebM 影片，已匯出 ${n.webm}`, 5000);
+    }
+    track('obs_export', { tool: s.mode, format: kind, sample: s.sample ? 'yes' : 'no' });
+  } catch (e) {
+    if (e?.name !== 'AbortError') toast('動畫產生失敗：' + (e?.message || e), 6000);
+  } finally {
+    wrap.remove();
+    keepAwake(false);
   }
 }
 
@@ -1102,6 +1145,8 @@ const actions = {
   'exp-xlsx': () => exportFile('xlsx'),
   'exp-png': () => exportFile('png'),
   'exp-json': () => exportFile('json'),
+  'exp-mp4': () => exportAnim('mp4'),
+  'exp-gif': () => exportAnim('gif'),
   async 'delete-session'() {
     if (!(await ask({ title: '刪除這場觀課？', body: `刪除後無法復原。如果還需要，請先匯出備份檔。${state.s.drive?.syncedAt ? '已存到雲端硬碟的檔案不會一起刪除。' : ''}`, ok: '刪除', danger: true }))) return;
     await store.del(state.s.id);

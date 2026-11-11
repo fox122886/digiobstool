@@ -231,7 +231,7 @@ export function jsonBlob(data) {
 
 export const names = (s) => {
   const b = fileBase(s);
-  return { xlsx: `${b}.xlsx`, png: `${b}_timeline.png`, json: `${b}.json` };
+  return { xlsx: `${b}.xlsx`, png: `${b}_timeline.png`, json: `${b}.json`, mp4: `${b}_replay.mp4`, webm: `${b}_replay.webm`, gif: `${b}_replay.gif` };
 };
 
 // ================= ITC =================

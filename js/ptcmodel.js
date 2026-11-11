@@ -186,6 +186,12 @@ export function mapSVG(s, width, colors, opts = {}) {
   p.push(`<rect width="${W}" height="${H}" fill="${colors.bg || '#fff'}"/>`);
   if (opts.header) {
     p.push(`<text x="16" y="26" font-size="17" font-weight="700" fill="${colors.ink}">${esc(s.meta.title || '教師移動')}</text>`);
+    if (opts.stamp) {
+      // 動畫用：右上角顯示目前的課堂時間與時刻，標題列下方是進度條
+      p.push(`<text x="${W - 16}" y="28" font-size="20" font-weight="700" fill="${colors.ink}" text-anchor="end" font-family="ui-monospace,Menlo,Consolas,monospace">${esc(opts.stamp[0])}</text>`);
+      p.push(`<text x="${W - 16}" y="47" font-size="12" fill="${colors.muted}" text-anchor="end">${esc(opts.stamp[1])}</text>`);
+      p.push(`<rect x="16" y="${headH - 4}" width="${W - 32}" height="3" fill="${colors.line}"/><rect x="16" y="${headH - 4}" width="${((W - 32) * Math.min(1, opts.progress || 0)).toFixed(1)}" height="3" fill="${colors.accent || '#0F6E66'}"/>`);
+    }
     p.push(`<text x="16" y="46" font-size="12" fill="${colors.muted}">${esc([s.meta.date, s.meta.className, s.meta.subject, s.meta.teacher && '授課：' + s.meta.teacher, s.meta.observer && '觀課：' + s.meta.observer, '課堂長度 ' + fmt(totalSec(s))].filter(Boolean).join('　'))}</text>`);
   }
   p.push(`<rect x="${X(0)}" y="${Y(0)}" width="${(room.w * u).toFixed(1)}" height="${(room.h * u).toFixed(1)}" fill="none" stroke="${colors.line}" stroke-width="1.5" rx="6"/>`);

@@ -516,3 +516,6 @@ tr.muted-row td { color: var(--muted); }
 .theme-btn:hover { background: var(--sunken); }
 .theme-btn svg { color: var(--accent); }
 .brand h1, .brand > p.small { padding-right: 112px; }
+.progress { height: 10px; border-radius: 999px; background: var(--sunken); overflow: hidden; margin: 12px 0 4px; }
+.progress span { display: block; height: 100%; background: var(--accent); transition: width .2s; }
+.exports .anim-len { grid-column: 1 / -1; }

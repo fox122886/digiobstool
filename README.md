@@ -37,6 +37,9 @@ tools/                 產生入口頁的腳本與 GA4 程式片段
 js/gdrive.js           Google 雲端硬碟同步（drive.file 權限）
 privacy.html           隱私權政策
 vendor/xlsx.full.min.js SheetJS 0.18.5（Apache 2.0）
+vendor/gifenc.esm.js   gifenc 1.0.3（MIT），PTC 路線動畫 GIF 編碼
+vendor/mp4-muxer.mjs   mp4-muxer 5.1.3（MIT），PTC 路線動畫 MP4 封裝
+js/anim.js             PTC 路線動畫（WebCodecs H.264；不支援時改用 MediaRecorder）
 icons/                 APP 圖示
 ```
 
@@ -84,7 +87,7 @@ python -m http.server 8000
 
 本工具改寫自 Miikka Turkkila 的 [LOBS（Lesson OBServation app）](https://github.com/MTurkkila/LOBS)，
 依原作授權以 [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hant) 釋出。
-SheetJS 依其 Apache 2.0 授權隨附。
+SheetJS 依其 Apache 2.0 授權隨附；gifenc（Matt DesLauriers）與 mp4-muxer（Vanilagy）依其 MIT 授權隨附。
 
 ## 使用統計（Google Analytics G-T79F3ZXDMG）
 
