@@ -473,3 +473,34 @@ body:has(.rec.chat) #toast { bottom: calc(var(--bar, 120px) + var(--kb, 0px) + 1
 .brand .small a { color: var(--accent); text-decoration: none; }
 .bar .bar-help { margin-left: auto; flex: none; font-size: .9rem; font-weight: 600; color: var(--accent); text-decoration: none; padding: 6px 10px; border-radius: 8px; }
 .bar .bar-help:hover { background: var(--sunken); }
+
+/* PTC 教師移動 */
+.ptc-editor, .ptc-map { width: 100%; margin: 8px 0; }
+.ptc-editor svg, .ptc-map svg, #tl svg { display: block; width: 100%; height: auto; max-width: 900px; margin: 0 auto; }
+.ptc-editor svg { touch-action: none; cursor: grab; }
+.ptc-map svg { touch-action: manipulation; cursor: crosshair; }
+.ptc-sel { display: grid; gap: 8px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--sunken); margin-bottom: 8px; }
+.ptc-size { gap: 6px; align-items: center; }
+.ptc-size .lab { font-size: .8rem; color: var(--muted); min-width: 2.6em; }
+.ptc-size .num { font-size: .85rem; min-width: 3.6em; text-align: center; }
+.btn.sq { min-width: 36px; padding: 0 8px; }
+.ptc-who { margin-bottom: 4px; }
+.ptc-bar { min-height: 64px; }
+.ptc-bar p { margin: 4px 0; }
+.ptc-kinds { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.ptc-kinds .chip {
+  min-height: 38px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface);
+  font: inherit; font-size: .88rem; font-weight: 600; color: var(--ink); cursor: pointer;
+}
+.ptc-kinds .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.ptc-zones { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; max-width: 480px; margin: 6px auto; }
+.ptc-zones div {
+  display: flex; flex-direction: column; align-items: center; padding: 10px 4px; border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) var(--a, 0%), var(--surface)); border: 1px solid var(--line);
+}
+.ptc-zones b { font-size: .85rem; }
+.ptc-zones .num { font-size: 1.2rem; font-weight: 700; }
+.ptc-zones small { font-size: .72rem; color: var(--muted); }
+ul.facts { margin: 4px 0 0; padding-left: 1.2em; font-size: .85rem; color: var(--muted); font-weight: 400; }
+.ptc-a-text { display: block; box-sizing: border-box; margin: 2px 0 8px 30px; width: calc(100% - 30px); }
+tr.muted-row td { color: var(--muted); }

@@ -1,6 +1,7 @@
 // 時間軸圖與匯出（xlsx／png／json）
 import { MODES, segments, stats, notes, totalSec, fmt, fmtHMS, fileBase, displayTitle, clockTime, APP_VERSION, wallTime, clockHMS,
   itcStats, objName, objShort, hasRate, isSeat, actColor, taskOf, ITC_TASKS } from './model.js';
+import { mapSVG, ptcSheets, ptcInfoRows } from './ptcmodel.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -26,6 +27,7 @@ function clip(text, maxUnits) {
  */
 export function timelineSVG(s, width, colors, opts = {}) {
   if (s.mode === 'ITC') return itcSVG(s, width, colors, opts);
+  if (s.mode === 'PTC') return mapSVG(s, Math.min(width, opts.header ? width : 900), colors, opts);
   const W = Math.max(320, Math.round(width));
   const D = Math.max(totalSec(s), 60);
   const narrow = W < 560;
@@ -160,7 +162,9 @@ export function workbook(s) {
       ['輪數', st.rounds.length], ['觀察人次', st.total],
       ['在工作中率（%）', st.rate == null ? '' : Math.round(st.rate * 1000) / 10]);
   }
+  if (s.mode === 'PTC') info.splice(info.length - 1, 0, ...ptcInfoRows(s));
   XLSX.utils.book_append_sheet(wb, sheet(XLSX, info, [24, 48]), '觀課資訊');
+  if (s.mode === 'PTC') { ptcSheets(XLSX, wb, s, sheet); return wb; }
 
   if (s.mode === 'ITC') { itcSheets(XLSX, wb, s); return wb; }
   if (s.mode !== 'ATC') {

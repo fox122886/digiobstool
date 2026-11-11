@@ -6,6 +6,7 @@ export const MODES = {
   ATC: { tag: 'ATC', name: '軼事記錄時間線標記', full: '軼事記錄時間線標記數位觀課工具', en: 'Anecdotal timeline coding' },
   DTC: { tag: 'DTC', name: '質量雙元時間線標記', full: '質量雙元時間線標記數位觀課工具', en: 'Duality timeline coding' },
   ITC: { tag: 'ITC', name: '間隔時間線標記', full: '間隔時間線標記數位觀課工具', en: 'Interval timeline coding' },
+  PTC: { tag: 'PTC', name: '教師移動路徑標記', full: '教師移動路徑標記數位觀課工具（雛形）', en: 'Path timeline coding' },
 };
 
 // 12 色：亮暗主題下白字皆可讀
@@ -227,6 +228,7 @@ const ON_TASK_COLORS = ['#2E8B57', '#2A8A96', '#2F6FB3', '#6E747A', '#C2572B', '
 export const ITC_PRESETS = [
   { id: 'on-task', name: '學生在工作中（預設）', codes: ['主動在工作中', '被動在工作中', '尋求協助', '無法判斷', '不在工作中', '干擾行為'], colors: ON_TASK_COLORS, task: ['on', 'on', 'on', 'skip', 'off', 'off'] },
   { id: 'engage', name: '參與程度 A–F', codes: ['A 主動參與', 'B 任務被動', 'C 尋求協助', 'D 未能聚焦', 'E 未參與', 'F 不良行為'], colors: ON_TASK_COLORS, task: ['on', 'on', 'on', 'off', 'off', 'off'] },
+  { id: 'tdo', name: '教專「在工作中」A／H／O（工具 5）', codes: ['A 專注認真', 'H 尋求協助', 'O 非工作中', '其他'], colors: ['#2E8B57', '#2F6FB3', '#C2572B', '#6E747A'], task: ['on', 'on', 'off', 'skip'] },
   { id: 'on-off', name: '在工作中／不在工作中', codes: ['在工作中', '不在工作中'], colors: ['#2E8B57', '#C2572B'], task: ['on', 'off'] },
   { id: 'activity', name: '數位學習活動', codes: ['聽講與回應', '看課本', '看平板', '看大螢幕', '寫練習題', '其他'] },
 ];

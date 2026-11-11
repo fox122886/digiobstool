@@ -5,6 +5,8 @@ import {
   ITC_PRESETS, itcPresetCodes, parseLabels, hasRate,
 } from './model.js';
 import * as itc from './itc.js';
+import * as ptc from './ptc.js';
+import { makeRoom, samplePTC } from './ptcmodel.js';
 import { TOOL, track } from './analytics.js';
 import { timelineSVG, download, timelinePNG, xlsxBlob, jsonBlob, names } from './output.js';
 import * as gd from './gdrive.js';
@@ -190,7 +192,7 @@ async function renderHome() {
   const item = (s) => {
     const live = s.status !== 'ended';
     const when = [s.meta.date, clockTime(s.clock.startedAt)].filter(Boolean).join(' ');
-    const count = isITC(s) ? itc.homeCount(s) : [hasCodes(s) && `${s.codes.length} 個代碼`, hasNotes(s) && `${notes(s).length} 則記錄`].filter(Boolean).join('、');
+    const count = isITC(s) ? itc.homeCount(s) : isPTC(s) ? ptc.homeCount(s) : [hasCodes(s) && `${s.codes.length} 個代碼`, hasNotes(s) && `${notes(s).length} 則記錄`].filter(Boolean).join('、');
     const dur = live ? (s.status === 'ready' ? '未開始' : '進行中') : fmt(totalSec(s));
     return `<li><button class="item" data-act="open" data-id="${esc(s.id)}">
       <span class="badge ${live ? 'live' : ''}">${s.mode}</span>
@@ -241,15 +243,17 @@ const TOOL_INFO = {
   ATC: { name: '軼事記錄時間線標記', desc: '隨時寫下觀察，每則自動標上「開始寫」與「送出」的課堂時間。' },
   DTC: { name: '質量雙元時間線標記', desc: '代碼按鈕與文字記錄並用，同時掌握時間分配與質性觀察。' },
   ITC: { name: '間隔時間線標記', desc: '輪流觀察每位學生，每隔數秒記下他是否在工作中，統計全班投入情形。' },
+  PTC: { name: '教師移動路徑標記', desc: '在教室圖上點出老師走過的位置，畫出移動路線與師生討論，分析巡視的空間與時間分布。（雛形）' },
 };
 const hasCodes = (s) => s.mode === 'UTC' || s.mode === 'DTC';
 const hasNotes = (s) => s.mode === 'ATC' || s.mode === 'DTC';
 const isITC = (s) => s.mode === 'ITC';
+const isPTC = (s) => s.mode === 'PTC';
 
 async function startNew(mode) {
   track('obs_setup', { tool: mode });
   let codes = [];
-  if (mode !== 'ATC') {
+  if (mode !== 'ATC' && mode !== 'PTC') {
     const last = await store.getSetting('lastCodes_' + mode);
     const fallback = mode === 'ITC' ? itcPresetCodes(ITC_PRESETS[0]) : PRESETS[0].codes.map(([label, kind], i) => ({ label, kind, color: PALETTE[i] }));
     codes = (last && last.length ? last : fallback).map((c) => ({ ...c }));
@@ -265,10 +269,15 @@ async function startNew(mode) {
       absent: [], cur: { t0: null, sel: null },
     };
   }
+  if (mode === 'PTC') {
+    const last = await store.getSetting('lastPTC', {});
+    s.ptc = { room: last.room ? JSON.parse(JSON.stringify(last.room)) : makeRoom('groups'), student: !!last.student, analysis: {} };
+  }
   s.meta.school = lastMeta.school || '';
   s.meta.observer = lastMeta.observer || '';
   state.draft = s;
   renderSetup();
+  if (mode === 'PTC') ptc.mountSetup();
 }
 
 function codesEditor(s) {
@@ -320,6 +329,7 @@ function renderSetup() {
       </label>
       ${s.codes.length > (s.mode === 'DTC' ? 6 : 8) ? `<p class="hint">超過 ${s.mode === 'DTC' ? 6 : 8} 個按鈕時，手機直式畫面需要捲動${s.mode === 'DTC' ? '，文字框會被擠到下方' : ''}，建議改用平板或橫式。</p>` : ''}
     </section>` : ''}
+    ${isPTC(s) ? ptc.setupPanel(s) : ''}
     ${isITC(s) ? itc.setupPanel(s) + `<section class="panel">
       <header><h2>記錄類別</h2><span class="hint num" id="code-count">${s.codes.length} / ${MAX_CODES}</span></header>
       <p class="hint">觀察每一位時，按下他符合的類別；預設是「學生在工作中」的六個類別。請用可以直接看到的外顯行為來定義每一類。點色塊可以換顏色。</p>
@@ -368,6 +378,11 @@ async function toRecord() {
     const it = s.itc;
     await store.setSetting('lastITC', { n: it.layout === 'seat' ? undefined : it.n, labels: it.layout === 'seat' ? null : it.labels, interval: it.interval, rec: it.rec,
       sound: it.sound, layout: it.layout, seat: it.seat, useActs: it.useActs, actList: it.actList });
+  }
+  if (isPTC(s)) {
+    const msg = ptc.readSetup(s);
+    if (msg) { const el = document.getElementById('ptc-err'); el.textContent = msg; el.hidden = false; el.scrollIntoView({ block: 'center', behavior: 'smooth' }); return; }
+    await store.setSetting('lastPTC', { room: s.ptc.room, student: s.ptc.student });
   }
   if (hasCodes(s) || isITC(s)) {
     s.codes.forEach((c) => { c.label = c.label.trim(); });
@@ -546,13 +561,14 @@ function renderRecord() {
       <span class="wall num" id="wall" title="現在時刻">${clockHMS(Date.now())}</span>
       <span class="title">${esc(s.mode)} · ${esc(displayTitle(s))}</span>
     </div></header>
-    <main class="rec-main ${s.mode === 'DTC' ? 'dtc' : ''} ${isITC(s) ? 'itc' : ''}" id="rec-main">${isITC(s) ? itc.body(s) : s.mode === 'UTC' ? utcBody(s) : s.mode === 'ATC' ? atcBody(s) : dtcBody(s)}</main>
-    <footer class="rec-bar"><div class="in" id="actions">${isITC(s) ? itc.actionBar(s) : actionBar(s)}</div></footer>
+    <main class="rec-main ${s.mode === 'DTC' ? 'dtc' : ''} ${isITC(s) ? 'itc' : ''} ${isPTC(s) ? 'ptc' : ''}" id="rec-main">${isPTC(s) ? ptc.body(s) : isITC(s) ? itc.body(s) : s.mode === 'UTC' ? utcBody(s) : s.mode === 'ATC' ? atcBody(s) : dtcBody(s)}</main>
+    <footer class="rec-bar"><div class="in" id="actions">${isPTC(s) ? ptc.actionBar(s) : isITC(s) ? itc.actionBar(s) : actionBar(s)}</div></footer>
   </div>`;
   if (s.status === 'recording') startTick();
   if (isRunning(s)) keepAwake(true);
   if (hasNotes(s)) restoreDraft();
   if (isITC(s)) itc.tick();
+  if (isPTC(s)) ptc.mountRecord();
 }
 
 function dtcBody(s) {
@@ -607,6 +623,7 @@ function refreshRecord() {
   st.textContent = label;
   st.className = 'state ' + cls;
   if (isITC(s)) { itc.refresh(); updateClock(); return; }
+  if (isPTC(s)) { ptc.refresh(); updateClock(); return; }
   if (app.querySelector('.rec.chat')) {
     document.getElementById('actions').innerHTML = topActions(s);
     refreshCodeViews();
@@ -843,7 +860,7 @@ function renderResult() {
   const meta = (key, label, extra = '') => `<label class="f ${extra}" for="r-${key}">${label}
     <input type="${key === 'date' ? 'date' : 'text'}" id="r-${key}" data-rmeta="${key}" value="${esc(m[key])}" ${s.sample ? 'disabled' : ''}></label>`;
 
-  let body = isITC(s) ? itc.resultBody(s) : '';
+  let body = isITC(s) ? itc.resultBody(s) : isPTC(s) ? ptc.resultBody(s) : '';
   if (hasCodes(s)) {
     const st = stats(s);
     const max = Math.max(...st.map((r) => r.pct || 0), 0.0001);
@@ -865,7 +882,7 @@ function renderResult() {
     body += `<section class="panel"><header><h2>文字記錄</h2><span class="hint num">${notes(s).length} 則</span></header>
       <div class="feed" id="feed">${feedHTML(s, { editable: !s.sample, newestFirst: false })}</div></section>`;
   }
-  const tlHint = { UTC: '色帶是持續行為，菱形是單次標記', ATC: '圓點是送出時間，淡色線段是撰寫時間', DTC: '色帶是持續行為，菱形是單次標記，最下列圓點是文字記錄', ITC: '每一欄是一輪，顏色比例是該輪各類別的人次' + (isITC(s) && (hasRate(s) || s.itc.acts) ? '；下方是各輪在工作中率與教學活動時段' : '') }[s.mode];
+  const tlHint = { UTC: '色帶是持續行為，菱形是單次標記', ATC: '圓點是送出時間，淡色線段是撰寫時間', DTC: '色帶是持續行為，菱形是單次標記，最下列圓點是文字記錄', ITC: '每一欄是一輪，顏色比例是該輪各類別的人次' + (isITC(s) && (hasRate(s) || s.itc.acts) ? '；下方是各輪在工作中率與教學活動時段' : ''), PTC: '即原始觀察記錄：實線箭頭是教師移動，圈內數字是學生—教師討論的順序' }[s.mode];
 
   app.innerHTML = `<div class="wrap">
     <div class="bar"><button class="back" data-act="home">‹ 首頁</button><h1>${esc(displayTitle(s))}</h1></div>
@@ -877,17 +894,17 @@ function renderResult() {
         <div><dt>開始時刻</dt><dd>${clockTime(s.clock.startedAt) || '—'}</dd></div>
         ${hasCodes(s) ? `<div><dt>標記次數</dt><dd>${s.events.filter((e) => e.type === 'on' || e.type === 'tap').length}</dd></div>` : ''}
         ${hasNotes(s) ? `<div><dt>記錄則數</dt><dd>${notes(s).length}</dd></div>` : ''}
-        ${isITC(s) ? itc.summaryItems(s) : ''}
+        ${isITC(s) ? itc.summaryItems(s) : ''}${isPTC(s) ? ptc.summaryItems(s) : ''}
       </dl>
     </section>
-    <section class="panel"><header><h2>${isITC(s) ? '各輪分布' : '時間軸'}</h2><span class="hint">${tlHint}</span></header>
+    <section class="panel"><header><h2>${isITC(s) ? '各輪分布' : isPTC(s) ? '移動路線' : '時間軸'}</h2><span class="hint">${tlHint}</span></header>
       <div class="tl" id="tl"></div></section>
     ${body}
     ${cloudPanel(s)}
     <section class="panel"><header><h2>匯出</h2><span class="hint">檔名只用英數字，任何系統都能正常開啟</span></header>
       <div class="exports">
         <button class="btn exp" data-act="exp-xlsx"><span>Excel 試算表</span><span class="fn">${n.xlsx}</span></button>
-        <button class="btn exp" data-act="exp-png"><span>${isITC(s) ? '分布圖與對象 × 輪圖片' : '時間軸圖片'}</span><span class="fn">${n.png}</span></button>
+        <button class="btn exp" data-act="exp-png"><span>${isITC(s) ? '分布圖與對象 × 輪圖片' : isPTC(s) ? '路線圖（原始觀察記錄）' : '時間軸圖片'}</span><span class="fn">${n.png}</span></button>
         <button class="btn exp" data-act="exp-json"><span>備份檔（可匯入其他裝置）</span><span class="fn">${n.json}</span></button>
       </div>
     </section>
@@ -966,7 +983,7 @@ const actions = {
     state.s = s;
     s.status === 'ended' ? renderResult() : renderRecord();
   },
-  sample(el) { state.s = sampleSession(el.dataset.mode); track('obs_sample', { tool: el.dataset.mode }); renderResult(); },
+  sample(el) { state.s = el.dataset.mode === 'PTC' ? samplePTC() : sampleSession(el.dataset.mode); track('obs_sample', { tool: el.dataset.mode }); renderResult(); },
   async 'g-signin'() {
     try {
       state.account = await gd.signIn();
@@ -1116,6 +1133,7 @@ app.addEventListener('click', (e) => {
   const fn = actions[el.dataset.act];
   if (fn) fn(el, e);
   else if (el.dataset.act.startsWith('itc-')) itc.action(el.dataset.act, el, e);
+  else if (el.dataset.act.startsWith('ptc-')) ptc.action(el.dataset.act, el, e);
 });
 
 app.addEventListener('input', (e) => {
@@ -1123,6 +1141,7 @@ app.addEventListener('input', (e) => {
   if (t.id === 'note-text') return onNoteInput(t);
   if (state.view === 'setup' && t.dataset.meta) state.draft.meta[t.dataset.meta] = t.value;
   if (state.view === 'setup' && t.id?.startsWith('itc-')) itc.onSetupInput(t);
+  if (t.id?.startsWith('ptc-') || t.dataset?.ptcA || t.dataset?.ptcKind) ptc.onInput(t);
   if (state.view === 'setup' && t.dataset.field === 'task') state.draft.codes[+t.dataset.i].task = t.value;
   if (state.view === 'setup' && t.dataset.field === 'label') {
     state.draft.codes[+t.dataset.i].label = t.value;
@@ -1199,6 +1218,7 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => { 
 
 // ---------- 啟動 ----------
 itc.init({ state, app, save, toast, esc, vibrate, nowT, parseLabels, ask });
+ptc.init({ state, app, save, toast, esc, vibrate, nowT, ask, themeColors, rerender: () => renderResult() });
 
 (async () => {
   state.persistent = await store.ready();
