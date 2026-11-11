@@ -2,7 +2,7 @@ import { store } from './store.js';
 import {
   MODES, PALETTE, PRESETS, MAX_CODES, uid, fmt, fmtDur, clockTime, newSession, elapsedSec, isPaused, isRunning,
   codeOf, openCodes, segments, stats, notes, totalSec, displayTitle, sampleSession, APP_VERSION, wallTime, clockHMS,
-  ITC_PRESETS, itcPresetCodes, parseLabels,
+  ITC_PRESETS, itcPresetCodes, parseLabels, hasRate,
 } from './model.js';
 import * as itc from './itc.js';
 import { timelineSVG, download, timelinePNG, xlsxBlob, jsonBlob, names } from './output.js';
@@ -258,7 +258,11 @@ async function startNew(mode) {
   if (hasCodes(s)) s.exclusive = !!(await store.getSetting('lastExclusive_' + mode, false));
   if (mode === 'ITC') {
     const last = await store.getSetting('lastITC', {});
-    s.itc = { n: last.n || 25, labels: last.labels || null, interval: last.interval ?? 0, cur: { t0: null, sel: null } };
+    s.itc = {
+      n: last.n || 25, labels: last.labels || null, interval: last.interval ?? 0, rec: last.rec || 0, sound: last.sound !== false,
+      layout: last.layout || 'rotate', seat: last.seat || null, useActs: !!last.useActs, actList: last.actList || null,
+      absent: [], cur: { t0: null, sel: null },
+    };
   }
   s.meta.school = lastMeta.school || '';
   s.meta.observer = lastMeta.observer || '';
@@ -270,7 +274,7 @@ function codesEditor(s) {
   return s.codes.map((c, i) => `<div class="code-row" data-i="${i}">
     <button class="swatch" style="--c:${c.color}" data-act="color" data-i="${i}" aria-label="變更「${esc(c.label)}」的顏色" title="點一下換顏色"></button>
     <input type="text" id="code-${i}" value="${esc(c.label)}" maxlength="20" data-field="label" data-i="${i}" aria-label="代碼 ${i + 1} 名稱" placeholder="代碼名稱">
-    ${isITC(s) ? '<span></span>' : `<span class="seg" role="group" aria-label="記錄方式">
+    ${isITC(s) ? itc.taskSelect(c, i) : `<span class="seg" role="group" aria-label="記錄方式">
       <button type="button" data-act="kind" data-kind="duration" data-i="${i}" aria-pressed="${c.kind === 'duration'}">持續</button>
       <button type="button" data-act="kind" data-kind="event" data-i="${i}" aria-pressed="${c.kind === 'event'}">單次</button>
     </span>`}
@@ -317,6 +321,7 @@ function renderSetup() {
     ${isITC(s) ? itc.setupPanel(s) + `<section class="panel">
       <header><h2>記錄類別</h2><span class="hint num" id="code-count">${s.codes.length} / ${MAX_CODES}</span></header>
       <p class="hint">觀察每一位時，按下他符合的類別；預設是「學生在工作中」的六個類別。請用可以直接看到的外顯行為來定義每一類。點色塊可以換顏色。</p>
+      <p class="hint">右側選單決定計算「在工作中率」時歸在哪一邊：在工作中率＝在工作中 ÷（在工作中＋不在工作中），「不計入」的類別（例如無法判斷）不列入。全部設為「不計入」就不計算。</p>
       <div class="codes-edit" id="codes">${codesEditor(s)}</div>
       <p class="err" id="code-err" hidden></p>
       <div class="row">
@@ -358,14 +363,16 @@ async function toRecord() {
   if (isITC(s)) {
     const msg = itc.readSetup(s);
     if (msg) { const el = document.getElementById('itc-err'); el.textContent = msg; el.hidden = false; el.scrollIntoView({ block: 'center', behavior: 'smooth' }); return; }
-    await store.setSetting('lastITC', { n: s.itc.n, labels: s.itc.labels, interval: s.itc.interval });
+    const it = s.itc;
+    await store.setSetting('lastITC', { n: it.layout === 'seat' ? undefined : it.n, labels: it.layout === 'seat' ? null : it.labels, interval: it.interval, rec: it.rec,
+      sound: it.sound, layout: it.layout, seat: it.seat, useActs: it.useActs, actList: it.actList });
   }
   if (hasCodes(s) || isITC(s)) {
     s.codes.forEach((c) => { c.label = c.label.trim(); });
     const msg = validateCodes(s);
     const el = document.getElementById('code-err');
     if (msg) { el.textContent = msg; el.hidden = false; el.scrollIntoView({ block: 'center', behavior: 'smooth' }); return; }
-    await store.setSetting('lastCodes_' + s.mode, s.codes.map(({ label, kind, color }) => ({ label, kind, color })));
+    await store.setSetting('lastCodes_' + s.mode, s.codes.map(({ label, kind, color, task }) => ({ label, kind, color, ...(task ? { task } : {}) })));
     await store.setSetting('lastExclusive_' + s.mode, !!s.exclusive);
   }
   await store.setSetting('lastMeta', { school: s.meta.school, observer: s.meta.observer });
@@ -666,6 +673,7 @@ function resume() {
   const s = state.s;
   const p = s.clock.pauses[s.clock.pauses.length - 1];
   if (p && p[1] == null) p[1] = Date.now();
+  if (isITC(s)) itc.onResume();
   save();
   keepAwake(true);
   refreshRecord();
@@ -846,7 +854,7 @@ function renderResult() {
     body += `<section class="panel"><header><h2>文字記錄</h2><span class="hint num">${notes(s).length} 則</span></header>
       <div class="feed" id="feed">${feedHTML(s, { editable: !s.sample, newestFirst: false })}</div></section>`;
   }
-  const tlHint = { UTC: '色帶是持續行為，菱形是單次標記', ATC: '圓點是送出時間，淡色線段是撰寫時間', DTC: '色帶是持續行為，菱形是單次標記，最下列圓點是文字記錄', ITC: '每一欄是一輪，顏色比例是該輪各類別的人次' }[s.mode];
+  const tlHint = { UTC: '色帶是持續行為，菱形是單次標記', ATC: '圓點是送出時間，淡色線段是撰寫時間', DTC: '色帶是持續行為，菱形是單次標記，最下列圓點是文字記錄', ITC: '每一欄是一輪，顏色比例是該輪各類別的人次' + (isITC(s) && (hasRate(s) || s.itc.acts) ? '；下方是各輪在工作中率與教學活動時段' : '') }[s.mode];
 
   app.innerHTML = `<div class="wrap">
     <div class="bar"><button class="back" data-act="home">‹ 首頁</button><h1>${esc(displayTitle(s))}</h1></div>
@@ -1093,6 +1101,7 @@ app.addEventListener('click', (e) => {
   if (!el || el.disabled) return;
   const fn = actions[el.dataset.act];
   if (fn) fn(el, e);
+  else if (el.dataset.act.startsWith('itc-')) itc.action(el.dataset.act, el, e);
 });
 
 app.addEventListener('input', (e) => {
@@ -1100,6 +1109,7 @@ app.addEventListener('input', (e) => {
   if (t.id === 'note-text') return onNoteInput(t);
   if (state.view === 'setup' && t.dataset.meta) state.draft.meta[t.dataset.meta] = t.value;
   if (state.view === 'setup' && t.id?.startsWith('itc-')) itc.onSetupInput(t);
+  if (state.view === 'setup' && t.dataset.field === 'task') state.draft.codes[+t.dataset.i].task = t.value;
   if (state.view === 'setup' && t.dataset.field === 'label') {
     state.draft.codes[+t.dataset.i].label = t.value;
     document.getElementById('code-err').hidden = true;
@@ -1174,7 +1184,7 @@ window.addEventListener('resize', () => {
 matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => { if (state.view === 'result') renderTimeline(); });
 
 // ---------- 啟動 ----------
-itc.init({ state, app, save, toast, esc, vibrate, nowT, parseLabels });
+itc.init({ state, app, save, toast, esc, vibrate, nowT, parseLabels, ask });
 
 (async () => {
   state.persistent = await store.ready();

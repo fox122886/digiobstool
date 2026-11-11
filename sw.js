@@ -1,5 +1,5 @@
 // 離線快取：改版時更新 VERSION，使用者下次開啟就會自動換成新版
-const VERSION = 'obs-2.0.0-alpha-13';
+const VERSION = 'obs-2.0.0-alpha-14';
 const FILES = [
   './', './index.html', './app.css', './manifest.webmanifest',
   './js/app.js', './js/model.js', './js/output.js', './js/store.js', './js/gdrive.js', './js/itc.js',
@@ -10,6 +10,7 @@ const FILES = [
   './guide/img/04-atc-record.webp', './guide/img/05-dtc-typing.webp', './guide/img/06-dtc-desktop.webp',
   './guide/img/08-result-timeline.webp', './guide/img/09-result-stats.webp', './guide/img/10-export.webp',
   './guide/img/11-itc-record.webp', './guide/img/12-itc-result.webp',
+  './guide/img/13-itc-seat-setup.webp', './guide/img/14-itc-sampling.webp', './guide/img/15-itc-activity-heat.webp',
 ];
 
 self.addEventListener('install', (e) => {

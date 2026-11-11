@@ -1,6 +1,6 @@
 // 時間軸圖與匯出（xlsx／png／json）
 import { MODES, segments, stats, notes, totalSec, fmt, fmtHMS, fileBase, displayTitle, clockTime, APP_VERSION, wallTime, clockHMS,
-  itcStats, objName, objShort } from './model.js';
+  itcStats, objName, objShort, hasRate, isSeat, actColor, taskOf, ITC_TASKS } from './model.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -150,8 +150,15 @@ export function workbook(s) {
   if (s.mode === 'ITC') {
     const st = itcStats(s);
     info.splice(info.length - 1, 0,
+      ['記錄方式', isSeat(s) ? `座位表（${s.itc.seat.rows} 排 × ${s.itc.seat.cols} 個）` : '輪播（依序號）'],
       ['觀察對象數', s.itc.n], ['取樣間隔', s.itc.interval ? `${s.itc.interval} 秒（自動倒數）` : '手動'],
-      ['輪數', st.rounds.length], ['觀察人次', st.total]);
+      ['先看後記', s.itc.rec ? `先看 ${s.itc.interval - s.itc.rec} 秒，最後 ${s.itc.rec} 秒記錄` : '不分段'],
+      ['在工作中類別', s.codes.filter((c) => c.task === 'on').map((c) => c.label).join('、') || '（未設定）'],
+      ['不在工作中類別', s.codes.filter((c) => c.task === 'off').map((c) => c.label).join('、') || '（未設定）'],
+      ['教學活動', s.itc.acts ? s.itc.acts.join('、') : '（未標記）'],
+      ['結束時缺席', (s.itc.absent || []).map((i) => objName(s, i)).join('、') || '無'],
+      ['輪數', st.rounds.length], ['觀察人次', st.total],
+      ['在工作中率（%）', st.rate == null ? '' : Math.round(st.rate * 1000) / 10]);
   }
   XLSX.utils.book_append_sheet(wb, sheet(XLSX, info, [24, 48]), '觀課資訊');
 
@@ -228,33 +235,48 @@ const NONE = '未記錄';
 
 function itcSheets(XLSX, wb, s) {
   const st = itcStats(s);
+  const rate = hasRate(s);
   const codeName = (id) => s.codes.find((c) => c.id === id)?.label ?? NONE;
   const pct = (a, b) => (b ? Math.round((a / b) * 1000) / 10 : 0);
+  const pr = (v) => (v == null ? '' : Math.round(v * 1000) / 10);
+  const taskName = Object.fromEntries(ITC_TASKS);
 
-  const sum = [['類別', '人次', '比例（%）']];
-  for (const r of st.byCode) sum.push([r.code.label, r.count, pct(r.count, st.total)]);
-  sum.push([NONE, st.none, pct(st.none, st.total)], ['合計', st.total, st.total ? 100 : 0]);
-  XLSX.utils.book_append_sheet(wb, sheet(XLSX, sum, [18, 8, 10]), '統計');
+  const sum = [['類別', '人次', '比例（%）', '在工作中率歸屬']];
+  for (const r of st.byCode) sum.push([r.code.label, r.count, pct(r.count, st.total), taskName[r.code.task || 'skip']]);
+  sum.push([NONE, st.none, pct(st.none, st.total), '不計入'], ['合計', st.total, st.total ? 100 : 0, '']);
+  if (rate) sum.push([], ['在工作中率（%）', pr(st.rate), '', '在工作中 ÷（在工作中＋不在工作中）']);
+  XLSX.utils.book_append_sheet(wb, sheet(XLSX, sum, [18, 8, 10, 30]), '統計');
 
-  const rh = ['輪', '開始時刻', '結束時刻', '開始（課堂時間）', '結束（課堂時間）', ...s.codes.map((c) => c.label), NONE, '小計'];
-  const rr = st.rounds.map((r) => [r.round, clockHMS(wallTime(s, r.start)), clockHMS(wallTime(s, r.end)), fmtHMS(r.start), fmtHMS(r.end),
-    ...s.codes.map((c) => r.counts[c.id]), r.none, r.size]);
-  rr.push(['合計', '', '', '', '', ...st.byCode.map((x) => x.count), st.none, st.total]);
-  XLSX.utils.book_append_sheet(wb, sheet(XLSX, [rh, ...rr], [6, 10, 10, 14, 14, ...s.codes.map(() => 12), 8, 8]), '各輪');
+  const acts = !!s.itc.acts;
+  const rh = ['輪', '開始時刻', '結束時刻', '開始（課堂時間）', '結束（課堂時間）', ...(acts ? ['主要教學活動'] : []), ...s.codes.map((c) => c.label), NONE, '小計', ...(rate ? ['在工作中率（%）'] : [])];
+  const rr = st.rounds.map((r) => [r.round, clockHMS(wallTime(s, r.start)), clockHMS(wallTime(s, r.end)), fmtHMS(r.start), fmtHMS(r.end), ...(acts ? [r.act] : []),
+    ...s.codes.map((c) => r.counts[c.id]), r.none, r.size, ...(rate ? [pr(r.rate)] : [])]);
+  rr.push(['合計', '', '', '', '', ...(acts ? [''] : []), ...st.byCode.map((x) => x.count), st.none, st.total, ...(rate ? [pr(st.rate)] : [])]);
+  XLSX.utils.book_append_sheet(wb, sheet(XLSX, [rh, ...rr], [6, 10, 10, 14, 14, ...(acts ? [12] : []), ...s.codes.map(() => 12), 8, 8, 14]), '各輪');
 
   // 對象 × 輪：每格是該輪的類別；右側是各類別人次
-  const head = ['對象', ...st.rounds.map((r) => `第${r.round}輪`), ...s.codes.map((c) => c.label), NONE, '合計'];
+  const seat = isSeat(s);
+  const head = ['對象', ...(seat ? ['排', '位'] : []), ...st.rounds.map((r) => `第${r.round}輪`), ...s.codes.map((c) => c.label), NONE, '合計', ...(rate ? ['在工作中率（%）'] : [])];
   const grid = st.perObj.map((o) => {
     const cells = st.rounds.map((r) => { const e = r.items.find((x) => x.obj === o.i); return e ? codeName(e.code) : ''; });
-    return [o.name, ...cells, ...s.codes.map((c) => o.counts[c.id]), o.none, o.total];
+    return [o.name, ...(seat ? [o.seat.r + 1, o.seat.c + 1] : []), ...cells, ...s.codes.map((c) => o.counts[c.id]), o.none, o.total, ...(rate ? [pr(o.rate)] : [])];
   });
-  XLSX.utils.book_append_sheet(wb, sheet(XLSX, [head, ...grid], [10, ...st.rounds.map(() => 12), ...s.codes.map(() => 12), 8, 8]), '對象x輪');
+  XLSX.utils.book_append_sheet(wb, sheet(XLSX, [head, ...grid], [10, ...(seat ? [5, 5] : []), ...st.rounds.map(() => 12), ...s.codes.map(() => 12), 8, 8, 14]), '對象x輪');
 
-  const dh = ['序', '輪', '對象', '類別', '觀察開始（課堂時間）', '記錄（課堂時間）', '觀察開始時刻', '記錄時刻', '開始（秒）', '記錄（秒）'];
-  const dr = st.rounds.flatMap((r) => r.items).map((e, i) => [i + 1, e.round, objName(s, e.obj), codeName(e.code),
+  if (acts) {
+    const ah = ['教學活動', '時段數', '累計時間', '累計（秒）', '觀察人次', ...s.codes.map((c) => c.label), NONE, ...(rate ? ['在工作中率（%）'] : [])];
+    const ar = st.byAct.map((a) => [a.label, a.times, fmtHMS(a.dur), Math.round(a.dur), a.total, ...s.codes.map((c) => a.counts[c.id]), a.none, ...(rate ? [pr(a.rate)] : [])]);
+    XLSX.utils.book_append_sheet(wb, sheet(XLSX, [ah, ...ar], [14, 8, 10, 10, 10, ...s.codes.map(() => 12), 8, 14]), '依活動');
+    const sh = ['序', '教學活動', '開始時刻', '結束時刻', '開始（課堂時間）', '結束（課堂時間）', '長度（秒）'];
+    const sr = st.segs.map((g, i) => [i + 1, g.label, clockHMS(wallTime(s, g.start)), clockHMS(wallTime(s, g.end)), fmtHMS(g.start), fmtHMS(g.end), Math.round(g.end - g.start)]);
+    XLSX.utils.book_append_sheet(wb, sheet(XLSX, [sh, ...sr], [6, 14, 10, 10, 14, 14, 10]), '活動時段');
+  }
+
+  const dh = ['序', '輪', '對象', '類別', '在工作中率歸屬', ...(acts ? ['教學活動'] : []), '觀察開始（課堂時間）', '記錄（課堂時間）', '觀察開始時刻', '記錄時刻', '開始（秒）', '記錄（秒）'];
+  const dr = st.rounds.flatMap((r) => r.items).map((e, i) => [i + 1, e.round, objName(s, e.obj), codeName(e.code), e.code ? taskName[taskOf(s, e.code)] : '不計入', ...(acts ? [e.act || ''] : []),
     fmtHMS(e.t0 ?? e.t), fmtHMS(e.t), clockHMS(wallTime(s, e.t0 ?? e.t)), clockHMS(wallTime(s, e.t)),
     Math.round((e.t0 ?? e.t) * 10) / 10, Math.round(e.t * 10) / 10]);
-  XLSX.utils.book_append_sheet(wb, sheet(XLSX, [dh, ...dr], [6, 6, 10, 16, 16, 14, 12, 10, 10, 10]), '明細');
+  XLSX.utils.book_append_sheet(wb, sheet(XLSX, [dh, ...dr], [6, 6, 10, 16, 14, ...(acts ? [12] : []), 16, 14, 12, 10, 10, 10]), '明細');
 }
 
 const textW = (t, size) => [...String(t)].reduce((w, ch) => w + (/[\u0000-\u00ff]/.test(ch) ? 0.58 : 1) * size, 0);
@@ -324,6 +346,52 @@ function itcSVG(s, width, colors, opts = {}) {
   parts.push(`<text x="${L}" y="${bottom + 48}" font-size="11" fill="${colors.muted}">輪次（下方為該輪開始時刻）</text>`);
   y = bottom + 60;
 
+  // 在工作中率走勢與教學活動時段（橫軸為課堂時間）
+  const rate = hasRate(s);
+  if ((rate && st.rounds.length) || st.segs.length) {
+    const D = Math.max(totalSec(s), ...st.rounds.map((r) => r.end), 60);
+    const xt = (t) => L + (Math.min(Math.max(t, 0), D) / D) * plotW;
+    parts.push(`<text x="16" y="${y + 14}" font-size="13" font-weight="700" fill="${colors.ink}">${rate ? '在工作中率' : '教學活動'}${rate && st.segs.length ? '與教學活動' : ''}</text>`);
+    if (rate) parts.push(`<text x="${W - R}" y="${y + 14}" font-size="11.5" fill="${colors.muted}" text-anchor="end">全課 ${st.rate == null ? '—' : Math.round(st.rate * 100) + '%'}</text>`);
+    y += 26;
+    const t2 = y, h2 = rate ? 110 : 22, b2 = t2 + h2;
+    for (const g of st.segs) {
+      const x0 = xt(g.start), x1 = xt(g.end);
+      const col = actColor(s, g.label);
+      parts.push(`<rect x="${x0.toFixed(1)}" y="${t2}" width="${Math.max(0, x1 - x0).toFixed(1)}" height="${h2}" fill="${col}" fill-opacity="${rate ? 0.16 : 0.85}"><title>${esc(g.label)} ${fmt(g.start)}–${fmt(g.end)}</title></rect>`);
+      if (rate) parts.push(`<rect x="${x0.toFixed(1)}" y="${b2 - 5}" width="${Math.max(0, x1 - x0).toFixed(1)}" height="5" fill="${col}"/>`);
+      const lab = clip(g.label, (x1 - x0 - 8) / 11.5);
+      if (x1 - x0 > 26 && lab && lab !== '…') parts.push(`<text x="${(x0 + 5).toFixed(1)}" y="${rate ? b2 - 10 : t2 + 15}" font-size="11" font-weight="600" fill="${rate ? col : '#fff'}">${esc(lab)}</text>`);
+    }
+    if (rate) {
+      for (const p of [0, 0.5, 1]) {
+        const yy = b2 - p * h2;
+        parts.push(`<line x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}" stroke="${colors.line}" stroke-dasharray="${p === 0 ? '' : '3 3'}"/>`);
+        parts.push(`<text x="${L - 6}" y="${yy + 4}" font-size="11" fill="${colors.muted}" text-anchor="end">${p * 100}%</text>`);
+      }
+      const pts = st.rounds.filter((r) => r.rate != null).map((r) => [xt((r.start + r.end) / 2), b2 - r.rate * h2, r]);
+      if (pts.length > 1) parts.push(`<polyline points="${pts.map(([px, py]) => `${px.toFixed(1)},${py.toFixed(1)}`).join(' ')}" fill="none" stroke="${colors.ink}" stroke-width="2" stroke-linejoin="round"/>`);
+      for (const [px, py, r] of pts) parts.push(`<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="3.5" fill="${colors.bg || '#fff'}" stroke="${colors.ink}" stroke-width="2"><title>第${r.round}輪 在工作中率 ${Math.round(r.rate * 100)}%</title></circle>`);
+    }
+    const step = Math.max(60, tickStep(D, plotW)); // 時刻只顯示到分鐘，刻度至少間隔 1 分鐘
+    for (let t = 0; t <= D + 0.1; t += step) {
+      parts.push(`<text x="${xt(t).toFixed(1)}" y="${b2 + 15}" font-size="10.5" fill="${colors.muted}" text-anchor="middle">${clockTime(wallTime(s, t))}</text>`);
+    }
+    y = b2 + 24;
+    if (st.segs.length) {
+      let ax = 16;
+      const seen = [...new Set(st.segs.map((g) => g.label))];
+      for (const label of seen) {
+        const w = 14 + 6 + textW(label, 12) + 18;
+        if (ax + w > W - R && ax > 16) { ax = 16; y += 20; }
+        parts.push(`<rect x="${ax}" y="${y}" width="14" height="10" rx="2" fill="${actColor(s, label)}"/>`);
+        parts.push(`<text x="${ax + 20}" y="${y + 10}" font-size="12" fill="${colors.ink}">${esc(label)}</text>`);
+        ax += w;
+      }
+      y += 24;
+    }
+  }
+
   // 對象 × 輪 格子圖
   if (opts.matrix && st.rounds.length) {
     const nameW = Math.min(110, Math.max(36, ...st.perObj.map((o) => textW(o.name, 12))) + 12);
@@ -352,6 +420,40 @@ function itcSVG(s, width, colors, opts = {}) {
       });
     });
     y += st.perObj.length * ch + 12;
+  }
+
+  // 座位熱區（匯出圖片用）
+  if (opts.matrix && isSeat(s) && st.total) {
+    const seat = s.itc.seat;
+    const at = new Map((s.itc.pos || []).map((p, i) => [`${p.r},${p.c}`, i]));
+    const cw = Math.min(84, (W - 32 - (seat.cols - 1) * 6) / seat.cols), chh = 40, gap = 6;
+    const gx = 16;
+    parts.push(`<text x="16" y="${y + 14}" font-size="13" font-weight="700" fill="${colors.ink}">座位熱區</text>`);
+    parts.push(`<text x="${gx + seat.cols * (cw + gap)}" y="${y + 14}" font-size="11" fill="${colors.muted}" text-anchor="end">${rate ? '顏色越深，在工作中率越高' : '格內數字為最常出現的類別'}</text>`);
+    y += 24;
+    const deskW = Math.min(seat.cols * (cw + gap) - gap, 220);
+    const gridW = seat.cols * (cw + gap) - gap;
+    parts.push(`<rect x="${gx + (gridW - deskW) / 2}" y="${y}" width="${deskW}" height="20" rx="4" fill="none" stroke="${colors.muted}"/>`);
+    parts.push(`<text x="${gx + gridW / 2}" y="${y + 14}" font-size="11" fill="${colors.muted}" text-anchor="middle">講台</text>`);
+    y += 28;
+    for (let r = 0; r < seat.rows; r++) {
+      for (let c = 0; c < seat.cols; c++) {
+        const i = at.get(`${r},${c}`);
+        const x = gx + c * (cw + gap), yy = y + r * (chh + gap);
+        if (i == null) continue;
+        const o = st.perObj[i];
+        let fill = 'none', op = 1, val = '—', dark = false;
+        if (o.total && rate && o.rate != null) { fill = '#2E8B57'; op = 0.12 + o.rate * 0.88; val = Math.round(o.rate * 100) + '%'; dark = o.rate > 0.55; }
+        else if (o.total) {
+          const top = s.codes.map((cd, k) => [cd, o.counts[cd.id], k]).sort((a2, b2) => b2[1] - a2[1])[0];
+          if (top[1]) { fill = top[0].color; op = 0.85; val = String(top[2] + 1); dark = true; }
+        }
+        parts.push(`<rect x="${x}" y="${yy}" width="${cw}" height="${chh}" rx="6" fill="${fill}" fill-opacity="${op.toFixed(2)}" stroke="${colors.line}"/>`);
+        parts.push(`<text x="${x + cw / 2}" y="${yy + 17}" font-size="12" font-weight="700" fill="${dark ? '#fff' : colors.ink}" text-anchor="middle">${esc(clip(o.name.replace(/ 號$/, ''), cw / 12))}</text>`);
+        parts.push(`<text x="${x + cw / 2}" y="${yy + 32}" font-size="11" fill="${dark ? '#fff' : colors.muted}" text-anchor="middle">${val}</text>`);
+      }
+    }
+    y += seat.rows * (chh + gap) + 10;
   }
 
   const H = Math.round(y);

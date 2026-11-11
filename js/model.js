@@ -68,7 +68,7 @@ export function newSession(mode, codes = []) {
   return {
     id: uid(), app: APP_VERSION, mode, status: 'ready',
     meta: { date: todayISO(), title: '', school: '', className: '', subject: '', teacher: '', observer: '', note: '' },
-    codes: codes.map((c, i) => ({ id: 'c' + (i + 1) + uid().slice(-3), label: c.label, kind: c.kind, color: c.color || PALETTE[i % PALETTE.length] })),
+    codes: codes.map((c, i) => ({ id: 'c' + (i + 1) + uid().slice(-3), label: c.label, kind: c.kind, color: c.color || PALETTE[i % PALETTE.length], ...(c.task ? { task: c.task } : {}) })),
     clock: { startedAt: null, pauses: [], endedAt: null },
     events: [],
     exclusive: false, // 持續型代碼互斥：開始一個就結束其他
@@ -223,13 +223,18 @@ export const ITC_MAX_N = 60;
 
 // 「在工作中」類別：綠＝主動投入、青＝被動、藍＝求助、灰＝無法判斷、橘＝不在工作中、紅＝干擾
 const ON_TASK_COLORS = ['#2E8B57', '#2A8A96', '#2F6FB3', '#6E747A', '#C2572B', '#A8324A'];
+// task：計算「在工作中率」時的歸屬。on＝在工作中、off＝不在工作中、skip＝不計入
 export const ITC_PRESETS = [
-  { id: 'on-task', name: '學生在工作中（預設）', codes: ['主動在工作中', '被動在工作中', '尋求協助', '無法判斷', '不在工作中', '干擾行為'], colors: ON_TASK_COLORS },
-  { id: 'engage', name: '參與程度 A–F', codes: ['A 主動參與', 'B 任務被動', 'C 尋求協助', 'D 未能聚焦', 'E 未參與', 'F 不良行為'], colors: ON_TASK_COLORS },
-  { id: 'on-off', name: '在工作中／不在工作中', codes: ['在工作中', '不在工作中'], colors: ['#2E8B57', '#C2572B'] },
+  { id: 'on-task', name: '學生在工作中（預設）', codes: ['主動在工作中', '被動在工作中', '尋求協助', '無法判斷', '不在工作中', '干擾行為'], colors: ON_TASK_COLORS, task: ['on', 'on', 'on', 'skip', 'off', 'off'] },
+  { id: 'engage', name: '參與程度 A–F', codes: ['A 主動參與', 'B 任務被動', 'C 尋求協助', 'D 未能聚焦', 'E 未參與', 'F 不良行為'], colors: ON_TASK_COLORS, task: ['on', 'on', 'on', 'off', 'off', 'off'] },
+  { id: 'on-off', name: '在工作中／不在工作中', codes: ['在工作中', '不在工作中'], colors: ['#2E8B57', '#C2572B'], task: ['on', 'off'] },
   { id: 'activity', name: '數位學習活動', codes: ['聽講與回應', '看課本', '看平板', '看大螢幕', '寫練習題', '其他'] },
 ];
-export const itcPresetCodes = (p) => p.codes.map((label, i) => ({ label, kind: 'event', color: p.colors?.[i] || PALETTE[i % PALETTE.length] }));
+export const itcPresetCodes = (p) => p.codes.map((label, i) => ({ label, kind: 'event', color: p.colors?.[i] || PALETTE[i % PALETTE.length], task: p.task?.[i] || 'skip' }));
+export const ITC_TASKS = [['on', '在工作中'], ['off', '不在工作中'], ['skip', '不計入']];
+export const ITC_ACTS = ['講述', '提問討論', '小組活動', '個別練習', '轉換／其他'];
+export const ITC_ACT_COLORS = ['#5B7FA6', '#B0813A', '#3E8E6E', '#8A6BB0', '#8C8C8C', '#B5566B', '#4F9AA8', '#9A8A3A'];
+export const ITC_SEAT_ORDERS = [['row', '橫向逐排'], ['snake', '橫向 S 形'], ['col', '直向逐行'], ['colsnake', '直向 S 形']];
 
 export function parseLabels(text) {
   return String(text || '').split(/[\s,，、;；]+/).map((x) => x.trim()).filter(Boolean).slice(0, ITC_MAX_N);
@@ -238,13 +243,57 @@ export function parseLabels(text) {
 export const samples = (s) => s.events.filter((e) => e.type === 'sample');
 export const objName = (s, i) => (s.itc.labels?.[i] ? s.itc.labels[i] : `${i + 1} 號`);
 export const objShort = (s, i) => (s.itc.labels?.[i] ? s.itc.labels[i] : String(i + 1));
+export const isSeat = (s) => s.itc?.layout === 'seat';
 
-// 下一筆要記錄的輪次與對象（由已記錄筆數推得）
-export function itcPos(s) {
-  const k = samples(s).length;
-  const n = s.itc.n;
-  return { k, round: Math.floor(k / n) + 1, obj: k % n };
+// 座位表：r＝第幾排（0＝最前排，靠講台），c＝由左而右第幾個（觀課者站在教室後方看過去）
+export function seatOrder(rows, cols, empty, pattern = 'snake', from = 'front') {
+  const skip = new Set(empty || []);
+  const R = [...Array(rows).keys()];
+  const Cs = [...Array(cols).keys()];
+  if (from === 'back') R.reverse();
+  const out = [];
+  if (pattern === 'row' || pattern === 'snake') {
+    R.forEach((r, k) => { const cs = pattern === 'snake' && k % 2 ? [...Cs].reverse() : Cs; for (const c of cs) out.push({ r, c }); });
+  } else {
+    Cs.forEach((c, k) => { const rs = pattern === 'colsnake' && k % 2 ? [...R].reverse() : R; for (const r of rs) out.push({ r, c }); });
+  }
+  return out.filter((p) => !skip.has(`${p.r},${p.c}`));
 }
+
+// 下一筆要記錄的輪次與對象：從上一筆的位置往後找第一位沒有缺席的對象
+export function itcPos(s) {
+  const sm = samples(s);
+  const k = sm.length;
+  const n = s.itc.n;
+  const ab = new Set(s.itc.absent || []);
+  if (!k) {
+    for (let o = 0; o < n; o++) if (!ab.has(o)) return { k, round: 1, obj: o };
+    return { k, round: 1, obj: 0 };
+  }
+  const last = sm[k - 1];
+  for (let j = 1; j <= n; j++) {
+    const o = (last.obj + j) % n;
+    if (!ab.has(o)) return { k, round: last.round + Math.floor((last.obj + j) / n), obj: o };
+  }
+  return { k, round: last.round + 1, obj: last.obj };
+}
+
+export const taskOf = (s, codeId) => s.codes.find((c) => c.id === codeId)?.task || 'skip';
+export const hasRate = (s) => s.codes.some((c) => c.task === 'on');
+// 在工作中率＝在工作中 ÷（在工作中＋不在工作中）；不計入與未記錄不列入分母
+export function onRate(s, list) {
+  let on = 0, off = 0;
+  for (const e of list) { const k = taskOf(s, e.code); if (k === 'on') on++; else if (k === 'off') off++; }
+  return on + off ? on / (on + off) : null;
+}
+
+// 教學活動時段：由 act 事件切出
+export function actSegments(s) {
+  const acts = s.events.filter((e) => e.type === 'act').sort((a, b) => a.t - b.t);
+  const end = Math.max(totalSec(s), ...samples(s).map((e) => e.t), 0);
+  return acts.map((a, i) => ({ label: a.label, start: a.t, end: i + 1 < acts.length ? acts[i + 1].t : end })).filter((g) => g.end > g.start);
+}
+export const actColor = (s, label) => ITC_ACT_COLORS[Math.max(0, (s.itc.acts || []).indexOf(label)) % ITC_ACT_COLORS.length];
 
 export function itcStats(s) {
   const sm = samples(s);
@@ -260,23 +309,36 @@ export function itcStats(s) {
     if (!roundMap.has(e.round)) roundMap.set(e.round, []);
     roundMap.get(e.round).push(e);
   }
+  const present = n - (s.itc.absent || []).length;
+  const lastRound = Math.max(0, ...roundMap.keys());
   const rounds = [...roundMap.entries()].sort((a, b) => a[0] - b[0]).map(([round, items]) => {
     const counts = {};
     for (const c of s.codes) counts[c.id] = 0;
     let rNone = 0;
     for (const e of items) { if (e.code && counts[e.code] != null) counts[e.code]++; else rNone++; }
+    const acts = {};
+    for (const e of items) if (e.act) acts[e.act] = (acts[e.act] || 0) + 1;
+    const act = Object.entries(acts).sort((a, b) => b[1] - a[1])[0]?.[0] || '';
     return {
-      round, items, counts, none: rNone, size: items.length, complete: items.length >= n,
-      start: Math.min(...items.map((e) => e.t0 ?? e.t)), end: Math.max(...items.map((e) => e.t)),
+      round, items, counts, none: rNone, size: items.length, complete: round < lastRound || items.length >= present,
+      start: Math.min(...items.map((e) => e.t0 ?? e.t)), end: Math.max(...items.map((e) => e.t)), rate: onRate(s, items), act,
     };
   });
   const perObj = Array.from({ length: n }, (_, i) => {
     const mine = sm.filter((e) => e.obj === i);
     const counts = {};
     for (const c of s.codes) counts[c.id] = mine.filter((e) => e.code === c.id).length;
-    return { i, name: objName(s, i), counts, none: mine.filter((e) => !e.code).length, total: mine.length };
+    return { i, name: objName(s, i), counts, none: mine.filter((e) => !e.code).length, total: mine.length, rate: onRate(s, mine), seat: s.itc.pos?.[i] || null };
   });
-  return { total, byCode, none, rounds, perObj };
+  const segs = actSegments(s);
+  const byAct = (s.itc.acts || []).map((label) => {
+    const mine = sm.filter((e) => e.act === label);
+    const counts = {};
+    for (const c of s.codes) counts[c.id] = mine.filter((e) => e.code === c.id).length;
+    const dur = segs.filter((g) => g.label === label).reduce((a, g) => a + g.end - g.start, 0);
+    return { label, total: mine.length, counts, none: mine.filter((e) => !e.code).length, rate: onRate(s, mine), dur, times: segs.filter((g) => g.label === label).length };
+  }).filter((a) => a.total || a.dur);
+  return { total, byCode, none, rounds, perObj, rate: onRate(s, sm), byAct, segs };
 }
 
 // 範例：10 位學生、每位 20 秒、40 分鐘（12 輪）；3 號、8 號較常分心，小組活動時段主動比例較高
@@ -286,7 +348,14 @@ function sampleITC() {
   s.sample = true;
   s.status = 'ended';
   s.meta = { ...s.meta, date: todayISO(base), title: '範例：六年丙班 社會「地方的產業」', school: '範例國小', className: '六年丙班', subject: '社會', teacher: '陳老師', observer: '林老師' };
-  s.itc = { n: 10, labels: null, interval: 20, cur: { t0: null, sel: null } };
+  // 座位表：4 排 × 3 個座位，最後一排右邊兩個是空位，共 10 位；橫向 S 形、從前排開始
+  const seat = { rows: 4, cols: 3, empty: ['3,1', '3,2'], order: 'snake', from: 'front', labels: {} };
+  const pos = seatOrder(seat.rows, seat.cols, seat.empty, seat.order, seat.from);
+  s.itc = { n: pos.length, labels: null, interval: 20, rec: 0, sound: true, layout: 'seat', seat, pos, absent: [], acts: [...ITC_ACTS], cur: { t0: null, sel: null } };
+  // 教學活動：講述 → 提問討論 → 小組活動 → 個別練習 → 講述
+  const plan = [[0, '講述'], [400, '提問討論'], [800, '小組活動'], [1800, '個別練習'], [2200, '講述']];
+  plan.forEach(([t, label], i) => s.events.push({ id: 'a' + i, type: 'act', t, label }));
+  const actAt = (t) => plan.filter((p) => p[0] <= t).pop()[1];
   s.clock.startedAt = base.getTime();
   const per = 20;
   let seed = 7;
@@ -303,7 +372,7 @@ function sampleITC() {
       else if (weak) code = x < 0.2 ? act : x < 0.45 ? pas : x < 0.55 ? help : x < 0.6 ? unk : x < 0.9 ? off : dis;
       else if (group) code = x < 0.62 ? act : x < 0.82 ? pas : x < 0.92 ? help : x < 0.96 ? unk : off;
       else code = x < 0.3 ? act : x < 0.82 ? pas : x < 0.86 ? help : x < 0.9 ? unk : off;
-      s.events.push({ id: 's' + (++n), type: 'sample', round: r, obj: i, code, t0: t, t: t + per });
+      s.events.push({ id: 's' + (++n), type: 'sample', round: r, obj: i, code, t0: t, t: t + per, act: actAt(t + per) });
       t += per;
     }
   }
