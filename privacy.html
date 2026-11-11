@@ -2,15 +2,17 @@
 <html lang="zh-Hant-TW">
 <head>
 <meta charset="utf-8">
-<!-- Google 代碼管理工具：只在正式網址載入，本機測試與預覽不送資料 -->
+<!-- Google Analytics（GA4）：只在正式網址載入，本機測試與預覽不送資料 -->
 <script>
 (function (w, d, h) {
   if (!/^(fox122886\.github\.io|web\.ntnu\.edu\.tw)$/.test(h)) return;
   w.dataLayer = w.dataLayer || [];
-  w.dataLayer.push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
+  w.gtag = function () { w.dataLayer.push(arguments); };
+  w.gtag('js', new Date());
+  w.gtag('config', 'G-T79F3ZXDMG');
   var j = d.createElement('script');
   j.async = true;
-  j.src = 'https://www.googletagmanager.com/gtm.js?id=GTM-TCVZMCML';
+  j.src = 'https://www.googletagmanager.com/gtag/js?id=G-T79F3ZXDMG';
   d.head.appendChild(j);
 })(window, document, location.hostname);
 </script>
@@ -54,7 +56,7 @@
   <p>本工具使用 Google API 取得的資訊，遵守 <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">Google API 服務使用者資料政策</a>，包括其中的「有限使用」規定：資料只用於提供本工具的儲存功能，不會轉移給第三方、不用於廣告，也不供任何人閱讀。</p>
 
   <h2>三、使用統計</h2>
-  <p>為了解各工具的使用情形、作為後續改善的依據，本工具透過 Google 代碼管理工具與 Google Analytics 收集匿名的使用統計，內容只有：</p>
+  <p>為了解各工具的使用情形、作為後續改善的依據，本工具透過 Google Analytics 收集匿名的使用統計，內容只有：</p>
   <ul>
     <li>開啟了哪一個頁面（首頁、各工具頁、操作指引的哪一段）。</li>
     <li>使用了哪些功能，例如在哪一個工具按下「開始計時」「結束觀課」「匯出」，以及課堂長度、記錄筆數、ITC 的取樣設定等數字。</li>

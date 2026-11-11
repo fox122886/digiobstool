@@ -3,15 +3,17 @@
 <head>
 <meta charset="utf-8">
 <base href="../">
-<!-- Google 代碼管理工具：只在正式網址載入，本機測試與預覽不送資料 -->
+<!-- Google Analytics（GA4）：只在正式網址載入，本機測試與預覽不送資料 -->
 <script>
 (function (w, d, h) {
   if (!/^(fox122886\.github\.io|web\.ntnu\.edu\.tw)$/.test(h)) return;
   w.dataLayer = w.dataLayer || [];
-  w.dataLayer.push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
+  w.gtag = function () { w.dataLayer.push(arguments); };
+  w.gtag('js', new Date());
+  w.gtag('config', 'G-T79F3ZXDMG');
   var j = d.createElement('script');
   j.async = true;
-  j.src = 'https://www.googletagmanager.com/gtm.js?id=GTM-TCVZMCML';
+  j.src = 'https://www.googletagmanager.com/gtag/js?id=G-T79F3ZXDMG';
   d.head.appendChild(j);
 })(window, document, location.hostname);
 </script>

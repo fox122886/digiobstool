@@ -31,9 +31,9 @@ js/model.js            資料模型、計時、統計（純函式）
 js/output.js           時間軸圖、Excel／PNG／JSON 匯出
 js/store.js            IndexedDB 本機資料庫
 js/itc.js              ITC 時間抽樣的記錄與結果畫面
-js/analytics.js        使用統計事件（推到 GTM 的 dataLayer）
+js/analytics.js        使用統計事件（GA4）
 utc/ atc/ dtc/ itc/    各工具入口頁（由 tools/make_tool_pages.py 從 index.html 產生）
-tools/                 產生入口頁的腳本與 GTM 程式片段
+tools/                 產生入口頁的腳本與 GA4 程式片段
 js/gdrive.js           Google 雲端硬碟同步（drive.file 權限）
 privacy.html           隱私權政策
 vendor/xlsx.full.min.js SheetJS 0.18.5（Apache 2.0）
@@ -86,9 +86,10 @@ python -m http.server 8000
 依原作授權以 [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hant) 釋出。
 SheetJS 依其 Apache 2.0 授權隨附。
 
-## 使用統計（GTM-TCVZMCML）
+## 使用統計（Google Analytics G-T79F3ZXDMG）
 
-GTM 只在 `fox122886.github.io` 與 `web.ntnu.edu.tw` 載入；其他網址（本機、預覽）只把事件放進 `dataLayer`，不會送出。
+GA4 只在 `fox122886.github.io` 與 `web.ntnu.edu.tw` 載入（`tools/ga-snippet.html`，已放進各頁 `<head>`）；其他網址（本機、預覽）不會送出。
+要在 GA4 報表依工具分開看，請到「管理 → 自訂定義」把 `tool`、`entry`、`format`、`guide_section` 等參數建成事件範圍的自訂維度。
 所有事件都帶 `entry`（`home` 或 `utc`／`atc`／`dtc`／`itc`，表示從哪個入口進來），不含任何觀課內容。
 
 | 事件 | 時機 | 參數 |
