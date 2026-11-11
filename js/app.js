@@ -5,6 +5,7 @@ import {
   ITC_PRESETS, itcPresetCodes, parseLabels, hasRate,
 } from './model.js';
 import * as itc from './itc.js';
+import { TOOL, track } from './analytics.js';
 import { timelineSVG, download, timelinePNG, xlsxBlob, jsonBlob, names } from './output.js';
 import * as gd from './gdrive.js';
 
@@ -134,6 +135,7 @@ async function syncNow(s, { interactive = true } = {}) {
     }
     state.syncing = s.id; refreshCloud();
     s.drive = await gd.syncSession(s);
+    track('drive_sync', { tool: s.mode });
     await save(s, { touch: false });
     if (interactive) toast('已存到你的雲端硬碟');
   } catch (e) {
@@ -176,7 +178,14 @@ async function renderHome() {
   try { list = await store.all(); } catch (e) { toast('讀取記錄失敗'); }
   list.sort((a, b) => (b.clock.startedAt || b.createdAt) - (a.clock.startedAt || a.createdAt));
   const unfinished = list.filter((s) => s.status !== 'ended');
-  const done = list.filter((s) => s.status === 'ended');
+  const allDone = list.filter((s) => s.status === 'ended');
+  // 工具入口頁（例如 itc/）只列該工具的記錄
+  const done = TOOL ? allDone.filter((s) => s.mode === TOOL) : allDone;
+  const modes = TOOL ? [TOOL] : Object.keys(TOOL_INFO);
+  const card = (m) => `<button class="mode" data-act="new" data-mode="${m}">
+        <span class="tag">${m}</span><h2>${TOOL ? '開始新的觀課' : TOOL_INFO[m].name}</h2>
+        <p>${TOOL_INFO[m].desc}</p>
+        <span class="go">開始設定 →</span></button>`;
 
   const item = (s) => {
     const live = s.status !== 'ended';
@@ -191,41 +200,26 @@ async function renderHome() {
 
   app.innerHTML = `<div class="wrap">
     <div class="brand">
-      <h1>數位觀課工具</h1>
-      <p class="muted">可離線使用，每個動作都即時存在這台裝置上。<a class="guide-link" href="guide.html">操作指引 →</a></p>
+      ${TOOL ? `<p class="small"><a href="./">‹ 數位觀課工具</a></p><h1><span class="num">${TOOL}</span> ${TOOL_INFO[TOOL].name}</h1>
+      <p class="muted">可離線使用，每個動作都即時存在這台裝置上。<a class="guide-link" href="guide.html#${TOOL.toLowerCase()}">${TOOL} 操作說明 →</a></p>`
+      : `<h1>數位觀課工具</h1>
+      <p class="muted">可離線使用，每個動作都即時存在這台裝置上。<a class="guide-link" href="guide.html">操作指引 →</a></p>`}
     </div>
     ${state.persistent ? '' : `<div class="panel" style="border-color:var(--warn)"><p><b>這個瀏覽器無法長期保存資料</b>（可能是無痕模式）。記錄只會留到關閉頁面為止，結束後請立即匯出。</p></div>`}
     ${unfinished.map((s) => `<div class="panel resume"><div class="grow"><b>有一場觀課尚未結束</b><br>
       <span class="small muted">${esc(s.mode)} · ${esc(displayTitle(s))}</span></div>
       <span class="row"><button class="btn sm" data-act="discard" data-id="${esc(s.id)}">捨棄</button>
       <button class="btn rec" data-act="open" data-id="${esc(s.id)}">繼續記錄</button></span></div>`).join('')}
-    <section class="modes" aria-label="選擇觀課工具">
-      <button class="mode" data-act="new" data-mode="UTC">
-        <span class="tag">UTC</span><h2>通用時間線標記</h2>
-        <p>用自訂按鈕記錄教學行為的起訖與次數，課後自動算出時間分配。</p>
-        <span class="go">開始設定 →</span></button>
-      <button class="mode" data-act="new" data-mode="ATC">
-        <span class="tag">ATC</span><h2>軼事記錄時間線標記</h2>
-        <p>隨時寫下觀察，每則自動標上「開始寫」與「送出」的課堂時間。</p>
-        <span class="go">開始設定 →</span></button>
-      <button class="mode" data-act="new" data-mode="DTC">
-        <span class="tag">DTC</span><h2>質量雙元時間線標記</h2>
-        <p>代碼按鈕與文字記錄並用，同時掌握時間分配與質性觀察。</p>
-        <span class="go">開始設定 →</span></button>
-      <button class="mode" data-act="new" data-mode="ITC">
-        <span class="tag">ITC</span><h2>間隔時間線標記</h2>
-        <p>輪流觀察每位學生，每隔數秒記下他是否在工作中，統計全班投入情形。</p>
-        <span class="go">開始設定 →</span></button>
+    <section class="modes ${TOOL ? 'one' : ''}" aria-label="選擇觀課工具">
+      ${modes.map(card).join('')}
     </section>
     ${cloudRow(state.account ? done.filter(gd.needsSync).length : 0)}
     <section class="panel" aria-labelledby="hist">
-      <header><h2 id="hist">觀課記錄</h2><span class="small muted num">${done.length} 場</span></header>
+      <header><h2 id="hist">${TOOL ? `${TOOL} ` : ''}觀課記錄</h2><span class="small muted num">${done.length} 場</span></header>
       ${done.length ? `<ul class="list">${done.map(item).join('')}</ul>` : `<div class="empty">
         <p>完成的觀課會列在這裡，可以回頭查看時間軸、編修與匯出。</p>
-        <div class="row" style="justify-content:center"><button class="btn sm" data-act="sample" data-mode="UTC">看 UTC 範例結果</button>
-        <button class="btn sm" data-act="sample" data-mode="ATC">看 ATC 範例結果</button>
-        <button class="btn sm" data-act="sample" data-mode="DTC">看 DTC 範例結果</button>
-        <button class="btn sm" data-act="sample" data-mode="ITC">看 ITC 範例結果</button></div></div>`}
+        <div class="row" style="justify-content:center">${modes.map((m) => `<button class="btn sm" data-act="sample" data-mode="${m}">看 ${m} 範例結果</button>`).join('')}</div></div>`}
+      ${TOOL && allDone.length > done.length ? `<p class="small muted">其他工具的 ${allDone.length - done.length} 場記錄，請到<a href="./">數位觀課工具首頁</a>查看。</p>` : ''}
     </section>
     <section class="row">
       <button class="btn sm" data-act="backup-all" ${list.length ? '' : 'disabled'}>匯出全部備份</button>
@@ -242,11 +236,18 @@ async function renderHome() {
 }
 
 // ---------- 設定頁 ----------
+const TOOL_INFO = {
+  UTC: { name: '通用時間線標記', desc: '用自訂按鈕記錄教學行為的起訖與次數，課後自動算出時間分配。' },
+  ATC: { name: '軼事記錄時間線標記', desc: '隨時寫下觀察，每則自動標上「開始寫」與「送出」的課堂時間。' },
+  DTC: { name: '質量雙元時間線標記', desc: '代碼按鈕與文字記錄並用，同時掌握時間分配與質性觀察。' },
+  ITC: { name: '間隔時間線標記', desc: '輪流觀察每位學生，每隔數秒記下他是否在工作中，統計全班投入情形。' },
+};
 const hasCodes = (s) => s.mode === 'UTC' || s.mode === 'DTC';
 const hasNotes = (s) => s.mode === 'ATC' || s.mode === 'DTC';
 const isITC = (s) => s.mode === 'ITC';
 
 async function startNew(mode) {
+  track('obs_setup', { tool: mode });
   let codes = [];
   if (mode !== 'ATC') {
     const last = await store.getSetting('lastCodes_' + mode);
@@ -289,7 +290,8 @@ function renderSetup() {
   const field = (key, label, extra = '') => `<label class="f ${extra}" for="m-${key}">${label}
     <input type="${key === 'date' ? 'date' : 'text'}" id="m-${key}" data-meta="${key}" value="${esc(m[key])}"></label>`;
   app.innerHTML = `<div class="wrap">
-    <div class="bar"><button class="back" data-act="home">‹ 首頁</button><h1>${s.mode} ${MODES[s.mode].name}</h1></div>
+    <div class="bar"><button class="back" data-act="home">‹ 首頁</button><h1>${s.mode} ${MODES[s.mode].name}</h1>
+      <a class="bar-help" href="guide.html#${s.mode.toLowerCase()}" target="_blank" rel="noopener" data-guide="${s.mode}">說明</a></div>
     <section class="panel">
       <header><h2>觀課資訊</h2><span class="hint">都可以留白，之後再補</span></header>
       <div class="fields">
@@ -652,6 +654,14 @@ async function startClock() {
   s.status = 'recording';
   if (isITC(s)) itc.onStart(s);
   startTick();
+  track('obs_start', {
+    tool: s.mode,
+    ...(hasCodes(s) || isITC(s) ? { code_count: s.codes.length } : {}),
+    ...(isITC(s) ? {
+      itc_layout: s.itc.layout || 'rotate', itc_n: s.itc.n, itc_interval: s.itc.interval,
+      itc_rec: s.itc.rec || 0, itc_acts: s.itc.acts ? 'yes' : 'no',
+    } : {}),
+  });
   try { await navigator.storage?.persist?.(); } catch (e) { /* 忽略 */ }
   await save();
   keepAwake(true);
@@ -699,6 +709,7 @@ async function endSession() {
   for (const code of openCodes(s).keys()) s.events.push({ id: uid(), type: 'off', code, t, auto: true });
   s.status = 'ended';
   s.draft = { text: '', t0: null };
+  track('obs_end', { tool: s.mode, obs_minutes: Math.round(totalSec(s) / 6) / 10, item_count: s.events.length });
   await save();
   stopTick();
   keepAwake(false);
@@ -913,6 +924,7 @@ async function exportFile(kind) {
     else if (kind === 'png') download(await timelinePNG(s), n.png);
     else download(jsonBlob(s), n.json);
     toast(`已匯出 ${n[kind]}`);
+    track('obs_export', { tool: s.mode, format: kind, sample: s.sample ? 'yes' : 'no' });
   } catch (e) {
     toast('匯出失敗：' + (e?.message || e), 5000);
   }
@@ -933,6 +945,7 @@ async function importFile(file) {
       n++;
     }
     toast(n ? `已匯入 ${n} 場觀課` : '這個檔案不是觀課備份檔');
+    if (n) track('backup_import', { session_count: n });
     renderHome();
   } catch (e) {
     toast('無法讀取這個檔案，請確認是本工具匯出的 .json 備份檔', 5000);
@@ -953,7 +966,7 @@ const actions = {
     state.s = s;
     s.status === 'ended' ? renderResult() : renderRecord();
   },
-  sample(el) { state.s = sampleSession(el.dataset.mode); renderResult(); },
+  sample(el) { state.s = sampleSession(el.dataset.mode); track('obs_sample', { tool: el.dataset.mode }); renderResult(); },
   async 'g-signin'() {
     try {
       state.account = await gd.signIn();
@@ -1084,6 +1097,7 @@ const actions = {
     const name = `observations_backup_${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}.json`;
     download(jsonBlob({ app: APP_VERSION, exportedAt: d.toISOString(), sessions: all }), name);
     toast(`已匯出 ${name}`);
+    track('backup_all', { session_count: all.length });
   },
 };
 

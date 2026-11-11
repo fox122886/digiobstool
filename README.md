@@ -31,6 +31,9 @@ js/model.js            資料模型、計時、統計（純函式）
 js/output.js           時間軸圖、Excel／PNG／JSON 匯出
 js/store.js            IndexedDB 本機資料庫
 js/itc.js              ITC 時間抽樣的記錄與結果畫面
+js/analytics.js        使用統計事件（推到 GTM 的 dataLayer）
+utc/ atc/ dtc/ itc/    各工具入口頁（由 tools/make_tool_pages.py 從 index.html 產生）
+tools/                 產生入口頁的腳本與 GTM 程式片段
 js/gdrive.js           Google 雲端硬碟同步（drive.file 權限）
 privacy.html           隱私權政策
 vendor/xlsx.full.min.js SheetJS 0.18.5（Apache 2.0）
@@ -82,3 +85,20 @@ python -m http.server 8000
 本工具改寫自 Miikka Turkkila 的 [LOBS（Lesson OBServation app）](https://github.com/MTurkkila/LOBS)，
 依原作授權以 [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hant) 釋出。
 SheetJS 依其 Apache 2.0 授權隨附。
+
+## 使用統計（GTM-TCVZMCML）
+
+GTM 只在 `fox122886.github.io` 與 `web.ntnu.edu.tw` 載入；其他網址（本機、預覽）只把事件放進 `dataLayer`，不會送出。
+所有事件都帶 `entry`（`home` 或 `utc`／`atc`／`dtc`／`itc`，表示從哪個入口進來），不含任何觀課內容。
+
+| 事件 | 時機 | 參數 |
+|---|---|---|
+| `obs_setup` | 進入設定頁 | `tool` |
+| `obs_start` | 按「開始計時」 | `tool`、`code_count`；ITC 另有 `itc_layout`、`itc_n`、`itc_interval`、`itc_rec`、`itc_acts` |
+| `obs_end` | 結束觀課 | `tool`、`obs_minutes`、`item_count` |
+| `obs_export` | 匯出檔案 | `tool`、`format`（xlsx／png／json）、`sample` |
+| `obs_sample` | 看範例結果 | `tool` |
+| `drive_sync` | 存到雲端硬碟成功 | `tool` |
+| `backup_all`／`backup_import` | 匯出全部備份／匯入備份 | `session_count` |
+| `guide_view` | 開啟操作指引或跳到某一段 | `guide_section` |
+| `guide_open_tool` | 從指引按「開啟 XTC」 | `tool` |

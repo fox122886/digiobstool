@@ -2,6 +2,18 @@
 <html lang="zh-Hant-TW">
 <head>
 <meta charset="utf-8">
+<!-- Google 代碼管理工具：只在正式網址載入，本機測試與預覽不送資料 -->
+<script>
+(function (w, d, h) {
+  if (!/^(fox122886\.github\.io|web\.ntnu\.edu\.tw)$/.test(h)) return;
+  w.dataLayer = w.dataLayer || [];
+  w.dataLayer.push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
+  var j = d.createElement('script');
+  j.async = true;
+  j.src = 'https://www.googletagmanager.com/gtm.js?id=GTM-TCVZMCML';
+  d.head.appendChild(j);
+})(window, document, location.hostname);
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>數位觀課工具隱私權政策</title>
 <meta name="theme-color" content="#0F6E66">
@@ -22,10 +34,10 @@
 <main class="g">
   <p><a href="./">‹ 回到數位觀課工具</a></p>
   <h1>隱私權政策</h1>
-  <p class="muted small">數位觀課工具 2.0（UTC／ATC／DTC）· 最後更新：2026 年 11 月 7 日</p>
+  <p class="muted small">數位觀課工具 2.0（UTC／ATC／DTC／ITC）· 最後更新：2026 年 11 月 11 日</p>
 
   <h2>一、本工具收集什麼</h2>
-  <p>本工具不設伺服器，也不收集使用者的觀課記錄。你在工具中輸入的觀課資訊、代碼按鈕的時間點與文字記錄，只會存在以下兩個地方：</p>
+  <p>本工具不設伺服器，也不收集使用者的觀課記錄（使用統計見第三點）。你在工具中輸入的觀課資訊、代碼按鈕的時間點與文字記錄，只會存在以下兩個地方：</p>
   <ul>
     <li><b>你自己的裝置</b>：存在瀏覽器的本機資料庫（IndexedDB），只有這台裝置、這個瀏覽器讀得到。</li>
     <li><b>你自己的 Google 雲端硬碟</b>：只有在你選擇「連結 Google」之後，才會把記錄存一份到你的雲端硬碟。</li>
@@ -41,17 +53,26 @@
   <p>本工具<b>無法</b>看到或修改你雲端硬碟中其他任何檔案。所有與 Google 的連線都直接在你的瀏覽器與 Google 之間進行，不經過其他伺服器。登入後取得的存取權杖只暫存在瀏覽器記憶體中，約一小時後失效，關閉頁面即清除。</p>
   <p>本工具使用 Google API 取得的資訊，遵守 <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">Google API 服務使用者資料政策</a>，包括其中的「有限使用」規定：資料只用於提供本工具的儲存功能，不會轉移給第三方、不用於廣告，也不供任何人閱讀。</p>
 
-  <h2>三、資料的刪除與撤銷授權</h2>
+  <h2>三、使用統計</h2>
+  <p>為了解各工具的使用情形、作為後續改善的依據，本工具透過 Google 代碼管理工具與 Google Analytics 收集匿名的使用統計，內容只有：</p>
+  <ul>
+    <li>開啟了哪一個頁面（首頁、各工具頁、操作指引的哪一段）。</li>
+    <li>使用了哪些功能，例如在哪一個工具按下「開始計時」「結束觀課」「匯出」，以及課堂長度、記錄筆數、ITC 的取樣設定等數字。</li>
+    <li>Google Analytics 一般會收集的裝置與瀏覽器類型、大致地區（國家或城市層級）。</li>
+  </ul>
+  <p><b>觀課的標題、班級、授課教師、代碼名稱、文字記錄、學生座號等任何觀課內容，都不會送出。</b>統計資料只用於彙整分析，不用於辨識個人，也不用於廣告。若不希望被統計，可使用瀏覽器的追蹤保護或廣告封鎖功能，不影響工具的任何功能。</p>
+
+  <h2>四、資料的刪除與撤銷授權</h2>
   <ul>
     <li><b>裝置上的記錄</b>：在結果頁按「刪除這場觀課」，或清除瀏覽器的網站資料。</li>
     <li><b>雲端硬碟上的記錄</b>：直接在你的 Google 雲端硬碟中刪除「數位觀課記錄」資料夾或其中的檔案。</li>
     <li><b>撤銷授權</b>：在工具首頁按「登出」，或到 <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">Google 帳戶的「第三方存取權」</a>移除「數位觀課工具」。</li>
   </ul>
 
-  <h2>四、觀課記錄中的個人資料</h2>
+  <h2>五、觀課記錄中的個人資料</h2>
   <p>觀課記錄可能包含授課教師與學生的資訊。請在觀課前告知被觀察者並取得同意，並建議以座號或代稱記錄學生，避免寫下全名。將記錄分享給他人時，請留意個人資料保護。</p>
 
-  <h2>五、聯絡我們</h2>
+  <h2>六、聯絡我們</h2>
   <p>國立臺灣師範大學師資培育學院 張民杰教授團隊<br>電子郵件：<span class="num">ntnutdo@gmail.com</span>　電話：<span class="num">02-7749-1228</span></p>
 </main>
 </body>

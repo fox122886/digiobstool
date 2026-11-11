@@ -2,6 +2,18 @@
 <html lang="zh-Hant-TW">
 <head>
 <meta charset="utf-8">
+<!-- Google 代碼管理工具：只在正式網址載入，本機測試與預覽不送資料 -->
+<script>
+(function (w, d, h) {
+  if (!/^(fox122886\.github\.io|web\.ntnu\.edu\.tw)$/.test(h)) return;
+  w.dataLayer = w.dataLayer || [];
+  w.dataLayer.push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
+  var j = d.createElement('script');
+  j.async = true;
+  j.src = 'https://www.googletagmanager.com/gtm.js?id=GTM-TCVZMCML';
+  d.head.appendChild(j);
+})(window, document, location.hostname);
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>數位觀課工具操作指引</title>
 <meta name="theme-color" content="#0F6E66">
@@ -42,6 +54,7 @@
   kbd { font-family: var(--font-num); font-size: .85em; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; padding: 1px 6px; background: var(--surface); white-space: nowrap; }
   .url { font-family: var(--font-num); word-break: break-all; }
   .g h3 .badge { margin-left: 8px; vertical-align: middle; }
+  .tool-open { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 8px; }
   .foot2 { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--line); font-size: .85rem; color: var(--muted); }
 </style>
 </head>
@@ -87,10 +100,10 @@
 
   <h2 id="choose">四種工具怎麼選</h2>
   <div class="tools">
-    <div><b class="tag">UTC</b><b>通用時間線標記</b><br>依觀察焦點把課堂中看到、聽到的事實分類，用按鈕標記起訖時間。適合想知道「各種行為占多少時間、出現幾次」，例如教師講述與學生討論的比例。</div>
-    <div><b class="tag">ATC</b><b>軼事記錄時間線標記</b><br>依時間順序簡要記錄教室裡發生的事件，每則自動標上時間。適合質性觀察，例如某位學生的學習歷程、師生互動的細節。</div>
-    <div><b class="tag">DTC</b><b>質量雙元時間線標記</b><br>結合前兩者：一邊按按鈕標記行為，一邊寫文字記錄。因為兩件事同時進行，<b>文字建議簡短摘述</b>，才不會漏掉課堂中的標記。</div>
-    <div><b class="tag">ITC</b><b>間隔時間線標記</b><br>時間抽樣：輪流觀察每位學生（或每一組），每隔固定秒數記下他當下的狀態，全部觀察一次為一輪。適合「在工作中」（on-task）觀察，了解全班或特定學生的專注與參與情形隨時間的變化。</div>
+    <div><b class="tag">UTC</b><b>通用時間線標記</b><br>依觀察焦點把課堂中看到、聽到的事實分類，用按鈕標記起訖時間。適合想知道「各種行為占多少時間、出現幾次」，例如教師講述與學生討論的比例。<br><a href="#utc">操作說明</a>　<a href="utc/">開啟 UTC →</a></div>
+    <div><b class="tag">ATC</b><b>軼事記錄時間線標記</b><br>依時間順序簡要記錄教室裡發生的事件，每則自動標上時間。適合質性觀察，例如某位學生的學習歷程、師生互動的細節。<br><a href="#atc">操作說明</a>　<a href="atc/">開啟 ATC →</a></div>
+    <div><b class="tag">DTC</b><b>質量雙元時間線標記</b><br>結合前兩者：一邊按按鈕標記行為，一邊寫文字記錄。因為兩件事同時進行，<b>文字建議簡短摘述</b>，才不會漏掉課堂中的標記。<br><a href="#dtc">操作說明</a>　<a href="dtc/">開啟 DTC →</a></div>
+    <div><b class="tag">ITC</b><b>間隔時間線標記</b><br>時間抽樣：輪流觀察每位學生（或每一組），每隔固定秒數記下他當下的狀態，全部觀察一次為一輪。適合「在工作中」（on-task）觀察，了解全班或特定學生的專注與參與情形隨時間的變化。<br><a href="#itc">操作說明</a>　<a href="itc/">開啟 ITC →</a></div>
   </div>
 
   <h2 id="flow">共同流程</h2>
@@ -108,6 +121,7 @@
   <p>記錄畫面上方隨時顯示兩個時間：大字是<b>課堂經過時間</b>（扣除暫停），小字是<b>現在時刻</b>。中途才進教室的觀課者，可以用現在時刻和其他人的記錄對照。</p>
 
   <h2 id="utc">UTC 代碼計時</h2>
+  <p class="tool-open"><a class="btn sm" href="utc/" data-tool-link="UTC">開啟 UTC →</a><span class="small muted url">fox122886.github.io/digiobstool/utc/</span></p>
   <h3>設定代碼按鈕</h3>
   <ul>
     <li>可設 1 到 12 個按鈕。手機直式建議 8 個以內，超過時畫面需要捲動。</li>
@@ -138,6 +152,7 @@
   </figure>
 
   <h2 id="atc">ATC 軼事記錄</h2>
+  <p class="tool-open"><a class="btn sm" href="atc/" data-tool-link="ATC">開啟 ATC →</a><span class="small muted url">fox122886.github.io/digiobstool/atc/</span></p>
   <h3>操作方式</h3>
   <ul>
     <li><b>開始打字的那一刻</b>會自動記下「開始記錄時間」，不用先按任何按鈕；按「送出」或 <kbd>Enter</kbd> 時記下「送出時間」。</li>
@@ -161,6 +176,7 @@
   </ul>
 
   <h2 id="dtc">DTC 質量雙元</h2>
+  <p class="tool-open"><a class="btn sm" href="dtc/" data-tool-link="DTC">開啟 DTC →</a><span class="small muted url">fox122886.github.io/digiobstool/dtc/</span></p>
   <ul>
     <li>代碼按鈕的設定與 UTC 相同，文字記錄的方式與 ATC 相同；兩者的按鈕設定分開記憶。</li>
     <li><b>復原只撤回按鈕動作</b>，不會刪掉已送出的文字；文字請用「刪除」。</li>
@@ -175,6 +191,7 @@
   </figure>
 
   <h2 id="itc">ITC 時間抽樣（在工作中）</h2>
+  <p class="tool-open"><a class="btn sm" href="itc/" data-tool-link="ITC">開啟 ITC →</a><span class="small muted url">fox122886.github.io/digiobstool/itc/</span></p>
   <p>輪流觀察每位學生（或每一組），每隔固定秒數記下他當下的狀態，全部觀察一次為一輪。除了基本的類別記錄，還可以選擇用座位表觀察、同時標記教學活動，結果會算出「在工作中率」。</p>
 
   <h3>觀察對象：輪播或座位表</h3>
@@ -374,11 +391,32 @@
   <p>為了能離線使用，工具會把程式存在裝置上。發布新版後，開啟時會在背景下載，並在回到首頁時自動換成新版；若仍看到舊版，關閉頁面後重新開啟即可。</p>
   <h3>可以給其他教師使用嗎？</h3>
   <p>可以，分享網址 <span class="url">https://fox122886.github.io/digiobstool/</span> 即可。每位使用者的記錄只存在自己的裝置上，彼此不會看到。</p>
+  <p>也可以直接分享單一工具的網址，開啟後首頁只列出該工具的記錄：</p>
+  <ul>
+    <li>UTC：<span class="url">https://fox122886.github.io/digiobstool/utc/</span></li>
+    <li>ATC：<span class="url">https://fox122886.github.io/digiobstool/atc/</span></li>
+    <li>DTC：<span class="url">https://fox122886.github.io/digiobstool/dtc/</span></li>
+    <li>ITC：<span class="url">https://fox122886.github.io/digiobstool/itc/</span></li>
+    <li>操作指引的某一段，在網址後面加上段落代號，例如 <span class="url">guide.html#itc</span>。</li>
+  </ul>
 
   <div class="foot2">
     <p>國立臺灣師範大學師資培育學院 張民杰教授團隊。本工具改寫自 Miikka Turkkila 的 <a href="https://github.com/MTurkkila/LOBS" target="_blank" rel="noopener">LOBS（Lesson OBServation app）</a>，以<a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hant" target="_blank" rel="noopener">創用 CC 姓名標示-非商業性-相同方式分享 4.0</a> 釋出。<a href="privacy.html">隱私權政策</a></p>
     <p>問題與建議：<span class="num">ntnutdo@gmail.com</span>　電話：<span class="num">02-7749-1228</span></p>
   </div>
 </main>
+<script>
+// 使用統計：記錄打開的是哪一段（只在正式網址送出）
+(function () {
+  function sec() { return (location.hash || '#top').slice(1).slice(0, 40); }
+  function push() { (window.dataLayer = window.dataLayer || []).push({ event: 'guide_view', guide_section: sec() }); }
+  push();
+  window.addEventListener('hashchange', push);
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('[data-tool-link]');
+    if (a) (window.dataLayer = window.dataLayer || []).push({ event: 'guide_open_tool', tool: a.getAttribute('data-tool-link') });
+  });
+})();
+</script>
 </body>
 </html>

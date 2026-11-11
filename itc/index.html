@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-Hant-TW" data-tool="ITC">
+<head>
+<meta charset="utf-8">
+<base href="../">
+<!-- Google 代碼管理工具：只在正式網址載入，本機測試與預覽不送資料 -->
+<script>
+(function (w, d, h) {
+  if (!/^(fox122886\.github\.io|web\.ntnu\.edu\.tw)$/.test(h)) return;
+  w.dataLayer = w.dataLayer || [];
+  w.dataLayer.push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
+  var j = d.createElement('script');
+  j.async = true;
+  j.src = 'https://www.googletagmanager.com/gtm.js?id=GTM-TCVZMCML';
+  d.head.appendChild(j);
+})(window, document, location.hostname);
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ITC 間隔時間線標記｜數位觀課工具</title>
+<meta name="theme-color" content="#0F6E66">
+<meta name="description" content="ITC 間隔時間線標記：時間抽樣：輪流觀察每位學生是否在工作中，可用座位表、標記教學活動。可離線使用、自動保存。">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div id="app" aria-live="polite"></div>
+<div id="toast" role="status" hidden></div>
+<script src="vendor/xlsx.full.min.js"></script>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

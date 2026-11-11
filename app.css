@@ -469,3 +469,7 @@ body:has(.rec.chat) #toast { bottom: calc(var(--bar, 120px) + var(--kb, 0px) + 1
 .stack i.none { background: transparent; box-shadow: inset 0 0 0 1px var(--muted); }
 .itc-matrix td.rate, .itc-matrix th.rate { padding-left: 10px; font-family: var(--font-num); font-weight: 600; white-space: nowrap; }
 .fields.two { grid-template-columns: 1fr 1fr; }
+.modes.one { grid-template-columns: 1fr; }
+.brand .small a { color: var(--accent); text-decoration: none; }
+.bar .bar-help { margin-left: auto; flex: none; font-size: .9rem; font-weight: 600; color: var(--accent); text-decoration: none; padding: 6px 10px; border-radius: 8px; }
+.bar .bar-help:hover { background: var(--sunken); }
