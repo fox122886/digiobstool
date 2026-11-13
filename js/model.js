@@ -160,6 +160,26 @@ export function stats(s) {
   });
 }
 
+// 文字中插入的時刻 [HH:MM:SS] 視為「關鍵時刻標記」
+export const STAMP_RE = /\[(\d{1,2}):(\d{2}):(\d{2})\]/g;
+// 時鐘時刻換回課堂經過秒數（扣除暫停）
+export function clockToT(s, h, m, sec) {
+  const c = s.clock;
+  if (!c.startedAt) return null;
+  const d = new Date(c.startedAt);
+  d.setHours(h, m, sec, 0);
+  let target = d.getTime();
+  if (target < c.startedAt - 60e3) target += 864e5; // 跨午夜
+  let paused = 0;
+  for (const [a, b] of c.pauses) paused += Math.max(0, Math.min(b ?? target, target) - a);
+  return Math.max(0, (target - c.startedAt - paused) / 1000);
+}
+export function noteStamps(s, n) {
+  return [...String(n.text || '').matchAll(STAMP_RE)].map((m) => ({ hms: `${m[1].padStart(2, '0')}:${m[2]}:${m[3]}`, t: clockToT(s, +m[1], +m[2], +m[3]) ?? n.t }));
+}
+export const hasStamp = (n) => /\[\d{1,2}:\d{2}:\d{2}\]/.test(n.text || '');
+export const isBareMark = (n) => hasStamp(n) && !String(n.text).replace(STAMP_RE, '').trim();
+
 export function notes(s) {
   return s.events.filter((e) => e.type === 'note').sort((a, b) => a.t - b.t);
 }
@@ -205,10 +225,11 @@ export function sampleSession(mode) {
     const items = [
       [62, 95, '教師以生活情境（分披薩）引起動機，多數學生專注抬頭。'],
       [310, 352, '提問「1/2 加 1/3 可以直接相加嗎？」第 3 排三位學生回答「2/5」。'],
-      [540, 590, '教師未直接糾正，請學生用圖形表示，12 號自行發現錯誤。'],
+      [540, 590, '教師未直接糾正，請學生用圖形表示，[10:19:12] 12 號自行發現錯誤。'],
       [900, 965, '小組討論：第 2 組由 7 號主導，其他成員參與較少。'],
       [1380, 1430, '巡視時對第 5 組提供提示卡，討論重新熱絡。'],
-      [1820, 1880, '分享時 12 號主動上台說明通分的理由，用詞精準。'],
+      [1820, 1880, '[10:40:35] 分享時 12 號主動上台說明通分的理由，用詞精準。'],
+      [2100, 2103, '[10:45:00] '],
       [2280, 2340, '收尾以出口卡檢核，約有 4 位學生仍以分子分母各自相加。'],
     ];
     for (const [t0, t, text] of items) ev('note', t, { t0, text });

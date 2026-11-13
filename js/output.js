@@ -1,6 +1,6 @@
 // 時間軸圖與匯出（xlsx／png／json）
 import { MODES, segments, stats, notes, totalSec, fmt, fmtHMS, fileBase, displayTitle, clockTime, APP_VERSION, wallTime, clockHMS,
-  itcStats, objName, objShort, hasRate, isSeat, actColor, taskOf, ITC_TASKS } from './model.js';
+  itcStats, objName, objShort, hasRate, isSeat, actColor, taskOf, ITC_TASKS, noteStamps, isBareMark } from './model.js';
 import { mapSVG, ptcSheets, ptcInfoRows } from './ptcmodel.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -75,6 +75,14 @@ export function timelineSVG(s, width, colors, opts = {}) {
         if (b - a > 1) parts.push(`<line x1="${a.toFixed(1)}" x2="${b.toFixed(1)}" y1="${mid}" y2="${mid}" stroke="${colors.accent}" stroke-width="3" stroke-linecap="round" opacity=".45"/>`);
         parts.push(`<g><title>#${k + 1} ${fmt(n.t)} ${esc(n.text)}</title><circle cx="${b.toFixed(1)}" cy="${mid}" r="6" fill="${colors.accent}"/>`);
         parts.push(`<text x="${b.toFixed(1)}" y="${(k % 2 ? mid + 19 : mid - 10)}" font-size="10.5" font-weight="700" fill="${colors.ink}" text-anchor="middle">${k + 1}</text></g>`);
+      });
+      // 文字中插入的時刻：以旗標標在當時的位置
+      notes(s).forEach((n, k) => {
+        for (const st of noteStamps(s, n)) {
+          const xx = x(Math.min(st.t, D)).toFixed(1);
+          const fy = k % 2 ? mid - 20 : mid + 8;
+          parts.push(`<g><title>#${k + 1} 時刻標記 ${st.hms}${isBareMark(n) ? '（待補充）' : ''}</title><line x1="${xx}" x2="${xx}" y1="${fy}" y2="${fy + 12}" stroke="${colors.warn || '#9A6400'}" stroke-width="1.6"/><path d="M${xx} ${fy}l8 3l-8 3z" fill="${colors.warn || '#9A6400'}"/></g>`);
+        }
       });
     } else if (row.kind === 'event') {
       for (const t of taps.filter((t) => t.code === row.code.id)) {
@@ -209,10 +217,12 @@ export function workbook(s) {
     const label = (id) => s.codes.find((c) => c.id === id)?.label ?? id;
     const during = (a, b) => [...new Set(segs.filter((g) => g.start <= b && g.end >= a).map((g) => label(g.code)))].join('、');
     if (s.mode === 'DTC') { head.push('撰寫期間進行中的代碼'); widths.push(24); }
+    head.push('時刻標記', '待補充'); widths.push(14, 8);
     const rows = [head, ...notes(s).map((n, i) => {
       const row = [i + 1, fmtHMS(n.t0 ?? n.t), fmtHMS(n.t), n.text, Math.round((n.t0 ?? n.t) * 10) / 10, Math.round(n.t * 10) / 10,
         clockHMS(wallTime(s, n.t0 ?? n.t)), clockHMS(wallTime(s, n.t))];
       if (s.mode === 'DTC') row.push(during(n.t0 ?? n.t, n.t));
+      row.push(noteStamps(s, n).map((x) => x.hms).join('、'), isBareMark(n) ? '是' : '');
       return row;
     })];
     XLSX.utils.book_append_sheet(wb, sheet(XLSX, rows, widths), '文字記錄');

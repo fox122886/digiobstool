@@ -519,3 +519,99 @@ tr.muted-row td { color: var(--muted); }
 .progress { height: 10px; border-radius: 999px; background: var(--sunken); overflow: hidden; margin: 12px 0 4px; }
 .progress span { display: block; height: 100%; background: var(--accent); transition: width .2s; }
 .exports .anim-len { grid-column: 1 / -1; }
+
+/* 議課重點 */
+.brief { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.brief-list { list-style: none; margin: 4px 0 8px; padding: 0; counter-reset: b; display: grid; gap: 6px; }
+.brief-list li { counter-increment: b; }
+.brief-list button {
+  width: 100%; display: grid; grid-template-columns: 26px 1fr auto; gap: 8px; align-items: baseline; text-align: left;
+  padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink);
+  font: inherit; font-size: .95rem; line-height: 1.6; cursor: pointer;
+}
+.brief-list button::before { content: counter(b); font-weight: 800; color: var(--accent); font-family: var(--font-num); }
+.brief-list button:hover { background: var(--sunken); }
+.brief-list b { color: var(--accent); }
+.brief-list .go { font-size: .75rem; color: var(--muted); white-space: nowrap; }
+@keyframes flash { from { box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 45%, transparent); } to { box-shadow: 0 0 0 0 transparent; } }
+section.panel.flash { animation: flash 1.4s ease-out; }
+
+/* 一頁式議課報告：固定白紙配色，不受深色模式影響 */
+.report-wrap { max-width: 860px; }
+.report-bar { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 0; background: var(--bg); }
+.report-bar .hint { flex: 1; min-width: 200px; }
+.report {
+  --ink: #17262A; --muted: #56686C; --line: #D3DCDA; --accent: #0F6E66;
+  background: #fff; color: var(--ink); border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 4px 24px rgba(0, 0, 0, .08);
+  padding: 32px 36px; margin: 8px 0 40px; font-size: 14px; line-height: 1.65;
+}
+.report h1 { font-size: 22px; margin: 2px 0 10px; color: var(--ink); }
+.report h2 { font-size: 14.5px; margin: 0 0 6px; color: var(--accent); }
+.report h3 { font-size: 13.5px; margin: 10px 0 4px; color: var(--ink); }
+.report section { margin-top: 16px; break-inside: avoid; }
+.report .kicker { margin: 0; font-size: 12px; color: var(--muted); letter-spacing: .04em; }
+.rmeta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px 16px; margin: 0; padding: 10px 0; border-top: 2px solid var(--ink); border-bottom: 1px solid var(--line); }
+.rmeta div { display: flex; gap: 8px; }
+.rmeta dt { color: var(--muted); min-width: 4.5em; font-size: 12.5px; }
+.rmeta dd { margin: 0; font-weight: 600; }
+.rbrief { margin: 0; padding-left: 1.4em; }
+.rbrief li { margin: 2px 0; }
+.rbrief b { color: var(--accent); }
+.rchart svg { display: block; width: 100%; height: auto; }
+.rt { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.rt th, .rt td { border-bottom: 1px solid var(--line); padding: 4px 6px; text-align: left; vertical-align: top; }
+.rt th { color: var(--muted); font-weight: 600; }
+.rt i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; }
+.rt.notes td.t { width: 3.4em; color: var(--muted); font-family: var(--font-num); }
+.rfeedback { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 18px; }
+.fill {
+  min-height: calc(var(--rows, 3) * 1.65em + 12px); padding: 6px 8px; border: 1px dashed #A9B8B5; border-radius: 6px;
+  background: repeating-linear-gradient(to bottom, transparent 0 calc(1.65em - 1px), #E6ECEA calc(1.65em - 1px) 1.65em);
+  background-position: 0 6px; white-space: pre-wrap; outline: none; color: var(--ink);
+}
+.fill:focus { border-style: solid; border-color: var(--accent); }
+.fill:empty::before { content: attr(data-ph); color: #9AA8A6; }
+.rf { margin-top: 18px; padding-top: 8px; border-top: 1px solid var(--line); font-size: 11.5px; color: var(--muted); text-align: right; }
+@media (max-width: 640px) {
+  .report { padding: 18px 16px; }
+  .rmeta { grid-template-columns: 1fr 1fr; }
+  .rfeedback { grid-template-columns: 1fr; }
+}
+@media print {
+  @page { size: A4; margin: 12mm 12mm 14mm; }
+  html, body { background: #fff !important; }
+  .no-print, .theme-btn, #toast { display: none !important; }
+  .wrap.report-wrap { max-width: none; padding: 0; margin: 0; }
+  .report { border: 0; box-shadow: none; padding: 0; margin: 0; font-size: 11.5px; }
+  .report h1 { font-size: 18px; }
+  .rmeta { grid-template-columns: repeat(3, 1fr); }
+  .rfeedback { grid-template-columns: 1fr 1fr; }
+  .fill { border-color: #B9C5C3; --rows: 2 !important; }
+  .fill:empty::before { content: ''; }
+  /* 擠進一頁：圖表限高、表格與間距收緊 */
+  .report section { margin-top: 9px; }
+  .rmeta { padding: 6px 0; }
+  .rchart svg { max-height: 90mm; width: auto; max-width: 100%; margin: 0 auto; }
+  .rchart.itc svg { max-height: 120mm; }
+  .rchart.atc svg { max-height: 40mm; }
+  .rt { font-size: 10px; }
+  .rt th, .rt td { padding: 1.5px 5px; }
+  .rextra h3 { margin: 4px 0 2px; }
+  .rf { margin-top: 10px; }
+}
+.rextra.two { display: grid; grid-template-columns: 2fr 3fr; gap: 16px; align-items: start; }
+@media (max-width: 640px) { .rextra.two { grid-template-columns: 1fr; } }
+@media print { .rextra.two { grid-template-columns: 2fr 3fr; } }
+.brief-focus { display: flex; gap: 10px; align-items: baseline; margin: 0 0 8px; padding: 8px 12px; border-radius: 8px; background: var(--sunken); font-size: .95rem; }
+.brief-focus span { flex: none; font-size: .78rem; font-weight: 700; color: var(--accent); }
+.report .rtext { margin: 0; white-space: pre-wrap; }
+
+/* 文字記錄中的時刻標記 */
+mark.ts { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); font-family: var(--font-num); font-weight: 700; padding: 0 4px; border-radius: 4px; }
+.note.key { border-left: 3px solid var(--warn); }
+.todo { display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; font-size: .82rem; color: var(--warn); font-weight: 600; }
+.report .todo { font-size: 10px; margin-left: 4px; color: #9A6400; }
+.report b { color: var(--ink); }
+.report .rbrief b { color: var(--accent); }
+.rnote { margin: 4px 0 0; font-size: 11px; color: var(--muted); }
+[data-act="only-key"][aria-pressed="true"] { background: var(--warn); border-color: var(--warn); color: #fff; }

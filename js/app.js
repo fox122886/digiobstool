@@ -3,11 +3,13 @@ import {
   MODES, PALETTE, PRESETS, MAX_CODES, uid, fmt, fmtDur, clockTime, newSession, elapsedSec, isPaused, isRunning,
   codeOf, openCodes, segments, stats, notes, totalSec, displayTitle, sampleSession, APP_VERSION, wallTime, clockHMS,
   ITC_PRESETS, itcPresetCodes, parseLabels, hasRate,
+  hasStamp, isBareMark,
 } from './model.js';
 import * as itc from './itc.js';
 import * as ptc from './ptc.js';
 import { makeRoom, samplePTC } from './ptcmodel.js';
 import { gifBlob, videoBlob } from './anim.js';
+import { briefPanel, reportHTML, printColors } from './brief.js';
 import { TOOL, track } from './analytics.js';
 import { timelineSVG, download, timelinePNG, xlsxBlob, jsonBlob, names } from './output.js';
 import * as gd from './gdrive.js';
@@ -307,6 +309,7 @@ function renderSetup() {
       <header><h2>觀課資訊</h2><span class="hint">都可以留白，之後再補</span></header>
       <div class="fields">
         ${field('title', '標題', 'full')}
+        ${field('focus', '觀察焦點（選填，例如觀察前會談約定的焦點）', 'full')}
         ${field('date', '日期')}${field('school', '學校')}
         ${field('className', '班級')}${field('subject', '科目')}
         ${field('teacher', '授課教師')}${field('observer', '觀課者')}
@@ -427,22 +430,27 @@ function codeButtons(s) {
   }).join('');
 }
 
-function feedHTML(s, { editable = true, newestFirst = true } = {}) {
-  const list = notes(s).map((n, i) => ({ n, i }));
+// 文字中的 [HH:MM:SS] 顯示成時刻標記
+const stampHTML = (text) => esc(text).replace(/\[(\d{1,2}:\d{2}:\d{2})\]/g, '<mark class="ts">$1</mark>');
+
+function feedHTML(s, { editable = true, newestFirst = true, onlyKey = false } = {}) {
+  let list = notes(s).map((n, i) => ({ n, i }));
+  if (onlyKey) list = list.filter(({ n }) => hasStamp(n));
   if (newestFirst) list.reverse();
-  if (!list.length) return `<p class="hint" style="text-align:center;padding:12px">送出的記錄會出現在這裡，可以隨時修改。</p>`;
+  if (!list.length) return `<p class="hint" style="text-align:center;padding:12px">${onlyKey ? '沒有插入時刻的記錄。' : '送出的記錄會出現在這裡，可以隨時修改。'}</p>`;
   return list.map(({ n, i }) => {
     const editing = state.editNote === n.id;
-    return `<article class="note" data-id="${n.id}">
+    const key = hasStamp(n), bare = isBareMark(n);
+    return `<article class="note ${key ? 'key' : ''}" data-id="${n.id}">
       <span class="no">#${i + 1}</span>
       <div class="when"><span>${fmt(n.t0 ?? n.t)} 開始 → ${fmt(n.t)} 送出<span class="muted">（${clockHMS(wallTime(s, n.t))}）</span></span>
         ${editable && !editing ? `<span class="acts"><button class="btn ghost sm" data-act="edit-note" data-id="${n.id}">修改</button>
         <button class="btn ghost sm" data-act="del-note" data-id="${n.id}" style="color:var(--rec)">刪除</button></span>` : ''}</div>
       ${editing ? `<div style="grid-column:2;display:flex;flex-direction:column;gap:6px">
-          <textarea id="edit-${n.id}" aria-label="修改記錄 #${i + 1}">${esc(n.text)}</textarea>
+          <textarea id="edit-${n.id}" aria-label="修改記錄 #${i + 1}">${esc(bare ? n.text.trimEnd() + ' ' : n.text)}</textarea>
           <div class="row"><button class="btn sm primary" data-act="save-note" data-id="${n.id}">儲存</button>
           <button class="btn sm" data-act="cancel-note">取消</button></div></div>`
-        : `<p class="txt" style="grid-column:2">${esc(n.text)}</p>`}
+        : `<p class="txt" style="grid-column:2">${stampHTML(n.text)}${bare ? `<span class="todo">待補充內容${editable ? `　<button class="btn ghost sm" data-act="edit-note" data-id="${n.id}">補充</button>` : ''}</span>` : ''}</p>`}
     </article>`;
   }).join('');
 }
@@ -881,14 +889,17 @@ function renderResult() {
       </details></section>`;
   }
   if (hasNotes(s)) {
-    body += `<section class="panel"><header><h2>文字記錄</h2><span class="hint num">${notes(s).length} 則</span></header>
-      <div class="feed" id="feed">${feedHTML(s, { editable: !s.sample, newestFirst: false })}</div></section>`;
+    const nKey = notes(s).filter(hasStamp).length, nBare = notes(s).filter(isBareMark).length;
+    body += `<section class="panel"><header><h2>文字記錄</h2><span class="hint num">${notes(s).length} 則${nKey ? `，${nKey} 則有時刻標記` : ''}${nBare ? `（${nBare} 則待補充）` : ''}</span></header>
+      ${nKey ? `<div class="row"><button class="btn sm" data-act="only-key" aria-pressed="${!!state.onlyKey}">只看有時刻標記的記錄</button></div>` : ''}
+      <div class="feed" id="feed">${feedHTML(s, { editable: !s.sample, newestFirst: false, onlyKey: !!state.onlyKey })}</div></section>`;
   }
   const tlHint = { UTC: '色帶是持續行為，菱形是單次標記', ATC: '圓點是送出時間，淡色線段是撰寫時間', DTC: '色帶是持續行為，菱形是單次標記，最下列圓點是文字記錄', ITC: '每一欄是一輪，顏色比例是該輪各類別的人次' + (isITC(s) && (hasRate(s) || s.itc.acts) ? '；下方是各輪在工作中率與教學活動時段' : ''), PTC: '即原始觀察記錄：實線箭頭是教師移動，圈內數字是學生—教師討論的順序' }[s.mode];
 
   app.innerHTML = `<div class="wrap">
     <div class="bar"><button class="back" data-act="home">‹ 首頁</button><h1>${esc(displayTitle(s))}</h1></div>
     ${s.sample ? `<div class="panel" style="border-color:var(--warn);background:var(--warn-soft)"><p><span class="badge sample">範例</span> 這是示範用的假資料，不會存進記錄；可以試試匯出看看格式。</p></div>` : ''}
+    ${isPTC(s) ? '' : briefPanel(s)}
     <section class="panel">
       <dl class="summary">
         <div><dt>工具</dt><dd>${s.mode}</dd></div>
@@ -905,6 +916,7 @@ function renderResult() {
     ${cloudPanel(s)}
     <section class="panel"><header><h2>匯出</h2><span class="hint">檔名只用英數字，任何系統都能正常開啟</span></header>
       <div class="exports">
+        ${isPTC(s) ? '' : `<button class="btn exp" data-act="report"><span>觀課重點摘要（一頁）</span><span class="fn">可列印或存成 PDF</span></button>`}
         <button class="btn exp" data-act="exp-xlsx"><span>Excel 試算表</span><span class="fn">${n.xlsx}</span></button>
         <button class="btn exp" data-act="exp-png"><span>${isITC(s) ? '分布圖與對象 × 輪圖片' : isPTC(s) ? '路線圖（原始觀察記錄）' : '時間軸圖片'}</span><span class="fn">${n.png}</span></button>
         ${isPTC(s) ? `<label class="f anim-len" for="anim-sec">路線動畫長度（整節課壓縮成）<select id="anim-sec">
@@ -917,7 +929,7 @@ function renderResult() {
     <section class="panel"><details>
       <summary>觀課資訊</summary>
       <div class="fields" style="margin-top:12px">
-        ${meta('title', '標題', 'full')}${meta('date', '日期')}${meta('school', '學校')}
+        ${meta('title', '標題', 'full')}${meta('focus', '觀察焦點', 'full')}${meta('date', '日期')}${meta('school', '學校')}
         ${meta('className', '班級')}${meta('subject', '科目')}${meta('teacher', '授課教師')}${meta('observer', '觀課者')}
         <label class="f full" for="r-note">備註<textarea id="r-note" data-rmeta="note" ${s.sample ? 'disabled' : ''}>${esc(m.note)}</textarea></label>
       </div></details></section>
@@ -989,6 +1001,15 @@ async function exportAnim(kind) {
     wrap.remove();
     keepAwake(false);
   }
+}
+
+// 觀課重點摘要：白底 A4 一頁，可列印或存成 PDF
+function renderReport() {
+  state.view = 'report';
+  const s = state.s;
+  const chart = timelineSVG(s, 700, printColors, { legend: true });
+  app.innerHTML = `<div class="wrap report-wrap">${reportHTML(s, chart)}</div>`;
+  window.scrollTo(0, 0);
 }
 
 async function importFile(file) {
@@ -1113,7 +1134,18 @@ const actions = {
   send: () => sendNote(),
   stamp: () => insertStamp(),
   'reset-t0'() { setT0(nowT()); save(); document.getElementById('note-text')?.focus(); },
-  'edit-note'(el) { state.editNote = el.dataset.id; refreshNotes(); document.getElementById('edit-' + el.dataset.id)?.focus(); },
+  'only-key'(el) {
+    state.onlyKey = !state.onlyKey;
+    el.setAttribute('aria-pressed', String(state.onlyKey));
+    const f = document.getElementById('feed');
+    if (f) f.innerHTML = feedHTML(state.s, { editable: !state.s.sample, newestFirst: false, onlyKey: state.onlyKey });
+  },
+  'edit-note'(el) {
+    state.editNote = el.dataset.id;
+    refreshNotes();
+    const ta = document.getElementById('edit-' + el.dataset.id);
+    if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+  },
   'cancel-note'() { state.editNote = null; refreshNotes(); },
   'save-note'(el) {
     const ev = state.s.events.find((e) => e.id === el.dataset.id);
@@ -1146,6 +1178,16 @@ const actions = {
   'exp-png': () => exportFile('png'),
   'exp-json': () => exportFile('json'),
   'exp-mp4': () => exportAnim('mp4'),
+  'brief-go'(el) {
+    const sec = [...app.querySelectorAll('section.panel')].find((x) => x.querySelector('h2')?.textContent.trim() === el.dataset.go);
+    if (!sec) return;
+    sec.querySelector('details:not([open])')?.setAttribute('open', '');
+    sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    sec.classList.remove('flash'); void sec.offsetWidth; sec.classList.add('flash');
+  },
+  report() { renderReport(); track('report_open', { tool: state.s.mode, sample: state.s.sample ? 'yes' : 'no' }); },
+  'report-back'() { renderResult(); },
+  'report-print'() { track('report_print', { tool: state.s.mode }); window.print(); },
   'exp-gif': () => exportAnim('gif'),
   async 'delete-session'() {
     if (!(await ask({ title: '刪除這場觀課？', body: `刪除後無法復原。如果還需要，請先匯出備份檔。${state.s.drive?.syncedAt ? '已存到雲端硬碟的檔案不會一起刪除。' : ''}`, ok: '刪除', danger: true }))) return;
@@ -1166,10 +1208,14 @@ const actions = {
 
 function refreshNotes() {
   if (state.view === 'record') refreshFeed();
-  else {
+  else if (state.editNote) {
     const f = document.getElementById('feed');
-    if (f) f.innerHTML = feedHTML(state.s, { editable: !state.s.sample, newestFirst: false });
-    renderTimeline();
+    if (f) f.innerHTML = feedHTML(state.s, { editable: !state.s.sample, newestFirst: false, onlyKey: !!state.onlyKey });
+  } else {
+    // 存檔或刪除後重畫整頁，讓觀課重點、時刻標記數量一起更新，並保留捲動位置
+    const y = window.scrollY;
+    renderResult();
+    window.scrollTo(0, y);
   }
 }
 
