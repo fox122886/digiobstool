@@ -4,6 +4,7 @@ import {
   codeOf, openCodes, segments, stats, notes, totalSec, displayTitle, sampleSession, APP_VERSION, wallTime, clockHMS,
   ITC_PRESETS, itcPresetCodes, parseLabels, hasRate,
   hasStamp, isBareMark,
+  safeImport,
 } from './model.js';
 import * as itc from './itc.js';
 import * as ptc from './ptc.js';
@@ -11,7 +12,7 @@ import { makeRoom, samplePTC } from './ptcmodel.js';
 import { gifBlob, videoBlob } from './anim.js';
 import { briefPanel, reportHTML, printColors } from './brief.js';
 import { TOOL, track } from './analytics.js';
-import { timelineSVG, download, timelinePNG, xlsxBlob, jsonBlob, names } from './output.js';
+import { timelineSVG, download, timelinePNG, sheetBlob, jsonBlob, names } from './output.js';
 import * as gd from './gdrive.js';
 
 const app = document.getElementById('app');
@@ -917,7 +918,7 @@ function renderResult() {
     <section class="panel"><header><h2>匯出</h2><span class="hint">檔名只用英數字，任何系統都能正常開啟</span></header>
       <div class="exports">
         ${isPTC(s) ? '' : `<button class="btn exp" data-act="report"><span>觀課重點摘要（一頁）</span><span class="fn">可列印或存成 PDF</span></button>`}
-        <button class="btn exp" data-act="exp-xlsx"><span>Excel 試算表</span><span class="fn">${n.xlsx}</span></button>
+        <button class="btn exp" data-act="exp-ods"><span>試算表（ODS）</span><span class="fn">${n.ods}</span></button>
         <button class="btn exp" data-act="exp-png"><span>${isITC(s) ? '分布圖與對象 × 輪圖片' : isPTC(s) ? '路線圖（原始觀察記錄）' : '時間軸圖片'}</span><span class="fn">${n.png}</span></button>
         ${isPTC(s) ? `<label class="f anim-len" for="anim-sec">路線動畫長度（整節課壓縮成）<select id="anim-sec">
           <option value="10">10 秒</option><option value="20" selected>20 秒</option><option value="30">30 秒</option><option value="60">60 秒</option></select></label>
@@ -955,7 +956,7 @@ async function exportFile(kind) {
   const s = state.s;
   const n = names(s);
   try {
-    if (kind === 'xlsx') download(xlsxBlob(s), n.xlsx);
+    if (kind === 'ods') download(sheetBlob(s), n.ods);
     else if (kind === 'png') download(await timelinePNG(s), n.png);
     else download(jsonBlob(s), n.json);
     toast(`已匯出 ${n[kind]}`);
@@ -1014,19 +1015,22 @@ function renderReport() {
 
 async function importFile(file) {
   try {
+    if (file.size > 50 * 1024 * 1024) { toast('檔案太大，請確認是本工具匯出的 .json 備份檔', 5000); return; }
     const data = JSON.parse(await file.text());
     const arr = Array.isArray(data) ? data : (Array.isArray(data.sessions) ? data.sessions : [data]);
     const existing = new Set((await store.all()).map((s) => s.id));
-    let n = 0;
+    let n = 0, bad = 0;
     for (const s of arr) {
       if (!s || !MODES[s.mode] || !Array.isArray(s.events) || !s.clock || !s.meta) continue;
+      if (!safeImport(s)) { bad++; continue; }
       if (existing.has(s.id)) s.id = uid();
       delete s.sample;
       if (s.status !== 'ended') s.status = 'ended';
       await store.put(s);
       n++;
     }
-    toast(n ? `已匯入 ${n} 場觀課` : '這個檔案不是觀課備份檔');
+    toast(n ? `已匯入 ${n} 場觀課${bad ? `，另有 ${bad} 場內容格式不符已略過` : ''}`
+      : bad ? `檔案裡的 ${bad} 場觀課內容格式不符，沒有匯入` : '這個檔案不是觀課備份檔', bad ? 6000 : 3000);
     if (n) track('backup_import', { session_count: n });
     renderHome();
   } catch (e) {
@@ -1174,7 +1178,7 @@ const actions = {
     if (open) app.querySelector('#detail')?.closest('details')?.setAttribute('open', '');
     toast('已刪除一筆標記');
   },
-  'exp-xlsx': () => exportFile('xlsx'),
+  'exp-ods': () => exportFile('ods'),
   'exp-png': () => exportFile('png'),
   'exp-json': () => exportFile('json'),
   'exp-mp4': () => exportAnim('mp4'),
@@ -1222,7 +1226,8 @@ function refreshNotes() {
 app.addEventListener('click', (e) => {
   const el = e.target.closest('[data-act]');
   if (!el || el.disabled) return;
-  const fn = actions[el.dataset.act];
+  // 只呼叫 actions 自己定義的動作，避免查到 constructor 之類的原型屬性
+  const fn = Object.hasOwn(actions, el.dataset.act) ? actions[el.dataset.act] : null;
   if (fn) fn(el, e);
   else if (el.dataset.act.startsWith('itc-')) itc.action(el.dataset.act, el, e);
   else if (el.dataset.act.startsWith('ptc-')) ptc.action(el.dataset.act, el, e);

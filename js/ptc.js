@@ -427,7 +427,7 @@ export function resultBody(s) {
       ${cb('r_design', '(2) 教師移動與<b>教學活動設計</b>有關')}${tx('r_design_t', '說明')}
       ${cb('r_manage', '(3) 教師移動與<b>班級經營</b>有關')}${tx('r_manage_t', '說明')}
       ${cb('r_other', '(4) 其他相關原因')}${tx('r_other_t', '說明')}
-      <p class="hint">匯出的 Excel 有「量化分析表」工作表，路線圖圖片即「原始觀察記錄」。</p></section>
+      <p class="hint">匯出的試算表有「量化分析表」工作表，路線圖圖片即「原始觀察記錄」。</p></section>
     <section class="panel"><header><h2>區域分布</h2><span class="hint">教室分成前中後 × 左中右，數字為停留時間比例</span></header>
       <div class="ptc-zones">${st.zones.flat().map((z) => `<div style="--a:${Math.round((z.dur / maxZ) * 85)}%" title="${z.name}：停留 ${fmt(z.dur)}，到達 ${z.visits} 次，討論 ${z.talks} 次">
         <b>${z.name}</b><span class="num">${pct(z.dur)}</span><small>${z.visits} 次${z.talks ? `・討論 ${z.talks}` : ''}</small></div>`).join('')}</div>

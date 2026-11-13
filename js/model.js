@@ -403,3 +403,32 @@ function sampleITC() {
   s.updatedAt = s.clock.endedAt;
   return s;
 }
+
+// ---------- 匯入檢查 ----------
+// 匯入的備份檔可能被改過。使用者輸入的文字欄位（標題、記錄、代碼名稱等）在畫面上一律跳脫處理；
+// 其餘欄位（編號、顏色、類型等）只允許英數與少數符號，不合格就整場不匯入，避免夾帶 HTML
+const TEXT_KEYS = new Set(['label', 'text', 'act', 'title', 'school', 'className', 'subject', 'teacher', 'observer', 'note', 'focus', 'name']);
+const TEXT_PARENTS = new Set(['meta', 'analysis', 'labels', 'acts']);
+const TOKEN = /^[A-Za-z0-9_.,:+#-]{0,80}$/;
+const COLOR = /^#[0-9A-Fa-f]{3,8}$/;
+export function safeImport(s) {
+  let ok = true;
+  const walk = (v, key, parent) => {
+    if (!ok) return;
+    if (Array.isArray(v)) { v.forEach((x) => walk(x, key, parent)); return; }
+    if (v && typeof v === 'object') {
+      for (const k of Object.keys(v)) {
+        if (k === '__proto__' || k === 'constructor' || k === 'prototype') { ok = false; return; }
+        walk(v[k], k, key);
+      }
+      return;
+    }
+    if (typeof v === 'number') { if (!Number.isFinite(v)) ok = false; return; }
+    if (typeof v !== 'string') return;
+    if (TEXT_KEYS.has(key) || TEXT_PARENTS.has(key) || TEXT_PARENTS.has(parent)) { if (v.length > 20000) ok = false; return; }
+    if (key === 'color' ? !COLOR.test(v) : !TOKEN.test(v)) ok = false;
+  };
+  delete s.drive; // 雲端連結屬於原本的帳號，不沿用
+  walk(s, '', '');
+  return ok;
+}

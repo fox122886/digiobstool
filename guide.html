@@ -2,21 +2,10 @@
 <html lang="zh-Hant-TW">
 <head>
 <meta charset="utf-8">
+<!-- 內容安全政策：只允許本站與必要的 Google 服務（雲端硬碟同步、使用統計） -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://*.googletagmanager.com https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https://*.google-analytics.com https://*.googletagmanager.com; connect-src 'self' https://www.googleapis.com https://accounts.google.com/gsi/ https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com; frame-src https://accounts.google.com/gsi/; font-src 'self' data:; media-src 'self' blob:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <script src="theme.js"></script>
-<!-- Google Analytics（GA4）：只在正式網址載入，本機測試與預覽不送資料 -->
-<script>
-(function (w, d, h) {
-  if (!/^(fox122886\.github\.io|web\.ntnu\.edu\.tw)$/.test(h)) return;
-  w.dataLayer = w.dataLayer || [];
-  w.gtag = function () { w.dataLayer.push(arguments); };
-  w.gtag('js', new Date());
-  w.gtag('config', 'G-T79F3ZXDMG');
-  var j = d.createElement('script');
-  j.async = true;
-  j.src = 'https://www.googletagmanager.com/gtag/js?id=G-T79F3ZXDMG';
-  d.head.appendChild(j);
-})(window, document, location.hostname);
-</script>
+<script src="ga.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>數位觀課工具操作指引</title>
 <meta name="theme-color" content="#0F6E66">
@@ -74,13 +63,15 @@
     <b>目錄</b>
     <ol>
       <li><a href="#before">開始之前</a></li>
-      <li><a href="#choose">四種工具怎麼選</a></li>
+      <li><a href="#choose">五種工具怎麼選</a></li>
       <li><a href="#flow">共同流程</a></li>
       <li><a href="#utc">UTC 代碼計時</a></li>
       <li><a href="#atc">ATC 軼事記錄</a></li>
       <li><a href="#dtc">DTC 質量雙元</a></li>
       <li><a href="#itc">ITC 時間抽樣（在工作中）</a></li>
+      <li><a href="#ptc">PTC 教師移動（雛形）</a></li>
       <li><a href="#result">結果、匯出與雲端</a></li>
+      <li><a href="#brief">觀課重點與摘要</a></li>
       <li><a href="#codes">代碼分類範例</a></li>
       <li><a href="#keys">鍵盤快捷鍵</a></li>
       <li><a href="#faq">常見問題</a></li>
@@ -100,20 +91,22 @@
         <li>電腦（Chrome、Edge）：網址列右側的「安裝」圖示。</li>
       </ul>
     </li>
+    <li><b>淺色／深色</b>：每頁右上角的圖示可以切換「跟隨系統 → 淺色 → 深色」，選擇會記在這台裝置。在教室後方用深色比較不刺眼。</li>
   </ul>
 
-  <h2 id="choose">四種工具怎麼選</h2>
+  <h2 id="choose">五種工具怎麼選</h2>
   <div class="tools">
     <div><b class="tag">UTC</b><b>通用時間線標記</b><br>依觀察焦點把課堂中看到、聽到的事實分類，用按鈕標記起訖時間。適合想知道「各種行為占多少時間、出現幾次」，例如教師講述與學生討論的比例。<br><a href="#utc">操作說明</a>　<a href="utc/">開啟 UTC →</a></div>
     <div><b class="tag">ATC</b><b>軼事記錄時間線標記</b><br>依時間順序簡要記錄教室裡發生的事件，每則自動標上時間。適合質性觀察，例如某位學生的學習歷程、師生互動的細節。<br><a href="#atc">操作說明</a>　<a href="atc/">開啟 ATC →</a></div>
     <div><b class="tag">DTC</b><b>質量雙元時間線標記</b><br>結合前兩者：一邊按按鈕標記行為，一邊寫文字記錄。因為兩件事同時進行，<b>文字建議簡短摘述</b>，才不會漏掉課堂中的標記。<br><a href="#dtc">操作說明</a>　<a href="dtc/">開啟 DTC →</a></div>
     <div><b class="tag">ITC</b><b>間隔時間線標記</b><br>時間抽樣：輪流觀察每位學生（或每一組），每隔固定秒數記下他當下的狀態，全部觀察一次為一輪。適合「在工作中」（on-task）觀察，了解全班或特定學生的專注與參與情形隨時間的變化。<br><a href="#itc">操作說明</a>　<a href="itc/">開啟 ITC →</a></div>
+    <div><b class="tag">PTC</b><b>教師移動路徑標記</b><span class="badge">雛形</span><br>在教室圖上點出老師走過的位置，連成移動路線，並標記停留、全班講解與師生討論。適合分析巡視的空間與時間分布，例如是否常停在前排、哪一組較少被關照。<br><a href="#ptc">操作說明</a>　<a href="ptc/">開啟 PTC →</a></div>
   </div>
 
   <h2 id="flow">共同流程</h2>
   <ol>
     <li><b>首頁選擇工具。</b>未結束的觀課會顯示在最上方，可以「繼續記錄」或「捨棄」。</li>
-    <li><b>填觀課資訊</b>（標題、日期、班級、授課教師等，都可留白之後再補），UTC、DTC 還要設定代碼按鈕；ITC 要設定觀察人數、取樣間隔與記錄類別。</li>
+    <li><b>填觀課資訊</b>（標題、日期、班級、授課教師等，都可留白之後再補）。「觀察焦點」可寫下這次觀課要看什麼，例如「學生小組討論的參與」；有填才會出現在結果頁與觀課重點摘要。UTC、DTC 還要設定代碼按鈕；ITC 要設定觀察人數、取樣間隔與記錄類別；PTC 要畫教室版面。</li>
     <li><b>進入記錄畫面</b>，上課開始時按「開始計時」。</li>
     <li>課堂中記錄；需要中斷可按「暫停」，暫停期間不計入課堂時間。</li>
     <li>按「結束觀課」，進入結果頁查看時間軸、修改記錄、匯出檔案。</li>
@@ -278,6 +271,35 @@
   </figure>
   <div class="note-box">座位熱區與對象 × 輪是每位學生的行為記錄。建議用座號、不要填姓名；議課時聚焦在教學安排與座位區域，避免據此替個別學生貼標籤。</div>
 
+  <h2 id="ptc">PTC 教師移動（雛形）</h2>
+  <p class="tool-open"><a class="btn sm" href="ptc/" data-tool-link="PTC">開啟 PTC →</a><span class="small muted url">fox122886.github.io/digiobstool/ptc/</span></p>
+  <p>依教師專業發展評鑑「工具 6：教師移動」的作法，把紙本上手畫的移動路線改成在教室圖上點選。這是雛形版本，歡迎試用並回饋意見。</p>
+  <h3>畫教室版面</h3>
+  <ul>
+    <li>先選範本（分組 6 組 × 4 人、分組 6 組 × 5 人、排排坐、開放式）按「套用範本」，再依實際教室調整。點選小組桌可以增減人數（1–12 人）與排數，人數不整齊時最後一格留空。</li>
+    <li>拖動桌子或區域可以移動位置；點一下選取後，可以改名稱、大小或刪除。「＋ 小組桌」「＋ 單人座位」「＋ 區域」可以新增，例如老師的桌子、科學中心。</li>
+    <li>由教室後方看向講台的方向排列，講台在上方。版面會自動記住，下次同一個班可以直接沿用。</li>
+    <li>勾選「同時記錄學生移動」後，記錄畫面會多一個「學生」切換。一人同時記錄老師與學生負擔較重，也可以兩位觀課者分工。</li>
+  </ul>
+  <h3>記錄</h3>
+  <ul>
+    <li>按「開始計時」後，老師走到哪裡就在教室圖上點哪裡，路線會依序連起來。</li>
+    <li>點完可以選這一點的類型：經過（預設）、停留觀察、全班講解、與學生討論、學生主動詢問。討論與詢問會依序編號 ①②③。</li>
+    <li>記錄學生時：先點學生座位，再點他去的地方，並選擇直接移動、有目的的移動或非目的性的移動。</li>
+    <li>按錯了就按「↶ 復原」。</li>
+  </ul>
+  <h3>結果</h3>
+  <ul>
+    <li><b>路線圖</b>：教室圖上的完整移動路線，顏色會跟著淺色／深色切換。拖動「時間軸重播」的滑桿，可以只看到某個時間點為止的移動，和授課教師一起回顧某一段教學。</li>
+    <li><b>區域分布</b>：教室分成前中後 × 左中右，數字是停留時間比例，顏色越深停留越久。另有各組的造訪與討論次數、各時段的移動情形。</li>
+    <li><b>教師移動量化分析表</b>：依「工具 6」格式，勾選顯著面向與移動原因並撰寫說明；下方「資料」由工具依記錄自動整理，供撰寫時參考。</li>
+    <li><b>路線動畫</b>：可匯出 MP4 影片或 GIF 動圖，依時間順序重播老師的移動，方便放進議課簡報。手機或較舊的瀏覽器不支援 MP4 時，會改存成 WebM 影片。</li>
+  </ul>
+  <figure>
+    <img src="guide/img/16-ptc-result.webp" alt="PTC 移動路線圖：教室中六組座位與各學習區，教師移動以箭頭線相連，圓圈數字是師生討論的順序，另有學生移動的虛線與叉線" loading="lazy" width="1392" height="1314">
+    <figcaption>移動路線圖（範例資料）。圓圈數字是學生—教師討論的順序，菱形是停留觀察與全班講解。</figcaption>
+  </figure>
+
   <h2 id="result">結果、匯出與雲端</h2>
   <h3>時間軸</h3>
   <p>色帶是持續行為，菱形是單次標記；ATC、DTC 最下列的圓點是文字記錄的送出時間，前方淡色線段是撰寫期間，數字對應記錄編號。在電腦上把滑鼠移到色帶或圓點上可看到詳細時間與內容。</p>
@@ -292,34 +314,44 @@
     <figcaption>時間分配（DTC 範例資料）。</figcaption>
   </figure>
   <h3>匯出</h3>
-  <p>檔名只用英數字（例如 <span class="num">DTC_20261106_1010.xlsx</span>），在任何系統都能正常開啟。中文標題寫在檔案內容裡。</p>
+  <p>檔名只用英數字（例如 <span class="num">DTC_20261106_1010.ods</span>），在任何系統都能正常開啟。中文標題寫在檔案內容裡。</p>
   <figure>
-    <img src="guide/img/10-export.webp" alt="匯出區：Excel 試算表、時間軸圖片、備份檔三個按鈕，各自顯示檔名" loading="lazy" width="1456" height="390">
+    <img src="guide/img/10-export.webp" alt="匯出區：觀課重點摘要、試算表（ODS）、時間軸圖片、備份檔四個按鈕，各自顯示檔名" loading="lazy" width="1392" height="540">
   </figure>
   <table>
     <thead><tr><th>檔案</th><th>內容</th></tr></thead>
     <tbody>
-      <tr><td>Excel 試算表</td><td>
+      <tr><td>試算表（.ods）</td><td>
+        OpenDocument 試算表格式，Excel、Google 試算表、LibreOffice、Numbers 都能直接開啟，也是政府文件標準格式（ODF）。用 Excel 開啟後要另存成 .xlsx 也可以。<br>
         <b>觀課資訊</b>：標題、日期、開始與結束時刻、課堂長度等。<br>
         <b>統計</b>（UTC、DTC）：各代碼次數、總時長、占比、平均每次、每分鐘次數。<br>
         <b>明細</b>（UTC、DTC）：每一筆標記的開始、結束、長度，含課堂時間與時鐘時刻。<br>
         <b>舊版格式</b>（UTC、DTC）：與 1.x 版相同的 start／stop 秒數欄位，原本的分析流程可直接沿用。<br>
         <b>文字記錄</b>（ATC、DTC）：序數、開始記錄時間、送出時間、記錄文字與時鐘時刻；DTC 另有「撰寫期間進行中的代碼」，可做質量交叉分析。<br>
-        <b>統計／各輪／對象x輪／依活動／活動時段／明細</b>（ITC）：各類別人次、比例與在工作中率；每一輪的類別分布、主要活動與在工作中率；每位對象（座位表另附排、位）每輪的類別與在工作中率；各教學活動的時間與在工作中率；每一段活動的起訖；每一筆取樣的時間與當時活動。</td></tr>
-      <tr><td>時間軸圖片</td><td>PNG 圖檔，白底，含標題與日期，可直接貼進議課簡報或報告。ITC 為各輪分布圖、在工作中率走勢，加上對象 × 輪方格與座位熱區。</td></tr>
+        <b>統計／各輪／對象x輪／依活動／活動時段／明細</b>（ITC）：各類別人次、比例與在工作中率；每一輪的類別分布、主要活動與在工作中率；每位對象（座位表另附排、位）每輪的類別與在工作中率；各教學活動的時間與在工作中率；每一段活動的起訖；每一筆取樣的時間與當時活動。<br>
+        <b>教師移動／學生移動／區域統計／組別統計／量化分析表</b>（PTC）：每一個移動點的時間、位置與類型；各區域、各組的停留時間與討論次數；「工具 6」量化分析表的勾選與說明。</td></tr>
+      <tr><td>時間軸圖片</td><td>PNG 圖檔，白底，含標題與日期，可直接貼進議課簡報或報告。ITC 為各輪分布圖、在工作中率走勢，加上對象 × 輪方格與座位熱區；PTC 為移動路線圖。</td></tr>
+      <tr><td>路線動畫</td><td>PTC 才有。MP4 影片或 GIF 動圖，依時間順序重播老師的移動。</td></tr>
       <tr><td>備份檔</td><td>JSON 格式的完整記錄。可在另一台裝置的首頁「匯入備份檔」，繼續查看與匯出。首頁的「匯出全部備份」可一次備份所有觀課。</td></tr>
     </tbody>
   </table>
   <h3 id="cloud">存到 Google 雲端硬碟</h3>
   <ul>
     <li>在首頁按「連結 Google」，選擇你的帳號並同意授權。本工具只能存取它自己建立的檔案，看不到你雲端硬碟裡的其他東西。</li>
-    <li>連結後，你的雲端硬碟會多一個「數位觀課記錄」資料夾。每場觀課存一份 Google 試算表（內容與 Excel 匯出相同），加上一份 .json 備份檔。</li>
+    <li>連結後，你的雲端硬碟會多一個「數位觀課記錄」資料夾。每場觀課存一份 Google 試算表（內容與匯出的試算表相同），加上一份 .json 備份檔。</li>
     <li>結束觀課時會自動存一份；若登入已超過約一小時，結果頁會出現「存到雲端硬碟」按鈕，按一下即可。</li>
     <li>在結果頁修改記錄後，雲端上的版本會自動更新，或按「更新雲端硬碟上的版本」。</li>
     <li>首頁的「同步 N 場觀課」可一次補存所有還沒存到雲端的觀課。</li>
     <li>試算表可以直接從雲端硬碟分享給授課教師或議課夥伴。</li>
   </ul>
   <div class="note-box">雲端同步只在正式網址提供。記錄只會存到你自己的帳號，開發團隊看不到。詳見<a href="privacy.html">隱私權政策</a>。</div>
+
+  <h2 id="brief">觀課重點與摘要</h2>
+  <p>UTC、ATC、DTC、ITC 的結果頁最上方有「觀課重點」卡片，會依記錄自動整理出幾項值得在議課時討論的發現，例如占比最高的行為、教師與學生的時間比、在工作中率最高與最低的一輪、不同教學活動的在工作中率。點一下某一項，會跳到結果頁對應的圖表。這些是依數字整理的提示，請搭配現場觀察判斷。PTC 目前請直接看路線圖與量化分析表。</p>
+  <ul>
+    <li><b>關鍵時刻</b>（ATC、DTC）：記錄中用「時刻」按鈕插入的 <span class="num">[10:52:14]</span> 會被當作關鍵時刻。觀課重點會列出這些記錄；結果頁按「只看有時刻標記的記錄」可以只看它們。只插入時刻、還沒補內容的記錄會標示「待補充」。</li>
+    <li><b>觀課重點摘要</b>：按「觀課重點摘要（一頁）」會開啟一頁 A4 的摘要，包含觀課資訊、觀察焦點（有填才顯示）、觀課重點、主要圖表與統計，以及關鍵時刻的記錄。按「列印／存成 PDF」即可列印，或在列印視窗選「另存為 PDF」，在議課時發給授課教師與夥伴。</li>
+  </ul>
 
   <h2 id="codes">代碼分類範例</h2>
   <p>以下分類取自原版使用說明與「100 道焦點問題」。標示「範本」的可在 UTC、DTC 設定頁的「套用」選單直接載入，再依需要修改名稱。</p>
@@ -392,6 +424,10 @@
   <p>不會。課堂時間是以實際時鐘計算，回到畫面時會顯示正確時間。記錄中工具會盡量讓螢幕保持開啟。</p>
   <h3>想在另一台裝置看記錄？</h3>
   <p>兩台裝置都連結同一個 Google 帳號後，可以在雲端硬碟的「數位觀課記錄」資料夾直接開啟試算表。要在另一台裝置繼續編修，把對應的 .json 備份檔下載後，到首頁「匯入備份檔」即可。沒有連結 Google 時，請在原裝置的結果頁按「備份檔」或首頁「匯出全部備份」。</p>
+  <h3>試算表為什麼是 .ods，不是 .xlsx？</h3>
+  <p>.ods 是開放的國際標準格式，本工具可以自己產生，不必載入第三方的試算表元件，比較安全，也比較輕巧。Excel、Google 試算表、LibreOffice、Numbers 都能直接開啟；需要 .xlsx 時，用 Excel 開啟後「另存新檔」即可。存到雲端硬碟的則會自動轉成 Google 試算表。</p>
+  <h3>資料安全嗎？</h3>
+  <p>本工具沒有後端伺服器，觀課記錄只存在你的裝置，以及你自己選擇連結的 Google 雲端硬碟。網頁設有內容安全政策（CSP），只允許載入本站與 Google 登入、統計所需的程式；匯入的備份檔也會先檢查格式。資安檢測的細節請見 <a href="https://github.com/fox122886/digiobstool/blob/main/SECURITY.md" target="_blank" rel="noopener">資安說明</a>。</p>
   <h3>畫面還是舊的版本？</h3>
   <p>為了能離線使用，工具會把程式存在裝置上。發布新版後，開啟時會在背景下載，並在回到首頁時自動換成新版；若仍看到舊版，關閉頁面後重新開啟即可。</p>
   <h3>可以給其他教師使用嗎？</h3>
@@ -402,6 +438,7 @@
     <li>ATC：<span class="url">https://fox122886.github.io/digiobstool/atc/</span></li>
     <li>DTC：<span class="url">https://fox122886.github.io/digiobstool/dtc/</span></li>
     <li>ITC：<span class="url">https://fox122886.github.io/digiobstool/itc/</span></li>
+    <li>PTC：<span class="url">https://fox122886.github.io/digiobstool/ptc/</span></li>
     <li>操作指引的某一段，在網址後面加上段落代號，例如 <span class="url">guide.html#itc</span>。</li>
   </ul>
 
@@ -410,19 +447,6 @@
     <p>問題與建議：<span class="num">ntnutdo@gmail.com</span>　電話：<span class="num">02-7749-1228</span></p>
   </div>
 </main>
-<script>
-// 使用統計：記錄打開的是哪一段（只在正式網址送出）
-(function () {
-  function sec() { return (location.hash || '#top').slice(1).slice(0, 40); }
-  function send(name, params) { if (typeof window.gtag === 'function') window.gtag('event', name, params); }
-  function push() { send('guide_view', { guide_section: sec() }); }
-  push();
-  window.addEventListener('hashchange', push);
-  document.addEventListener('click', function (e) {
-    var a = e.target.closest && e.target.closest('[data-tool-link]');
-    if (a) send('guide_open_tool', { tool: a.getAttribute('data-tool-link'), transport_type: 'beacon' });
-  });
-})();
-</script>
+<script src="guide.js"></script>
 </body>
 </html>

@@ -177,14 +177,14 @@ export function reportHTML(s, chartSVG) {
     extra += `<div><h3>時間分配</h3><table class="rt"><thead><tr><th>代碼</th><th>次數</th><th>總時長</th><th>占比</th></tr></thead><tbody>${st.map((x) => `<tr><td><i style="background:${x.code.color}"></i>${esc(x.code.label)}</td><td>${x.count}</td><td>${x.total == null ? '—' : fmt(x.total)}</td><td>${x.pct == null ? `每分 ${x.perMin.toFixed(2)} 次` : pct(x.pct)}</td></tr>`).join('')}</tbody></table></div>`;
   }
   if (s.mode === 'ATC' || s.mode === 'DTC') {
-    // 有插入時刻的記錄就只列關鍵時刻（其餘見結果頁或 Excel），沒有就列出全部
+    // 有插入時刻的記錄就只列關鍵時刻（其餘見結果頁或試算表），沒有就列出全部
     const all = notes(s);
     const keys = all.filter(hasStamp);
     const list = keys.length ? keys : all;
     const txt = (n) => esc(n.text).replace(/\[(\d{1,2}:\d{2}:\d{2})\]/g, '<b>$1</b>') + (isBareMark(n) ? '<span class="todo">（待補充）</span>' : '');
     const when = (n) => (noteStamps(s, n)[0]?.hms || clockHMS(wallTime(s, n.t))).slice(0, 5);
     extra += `<div><h3>${keys.length ? '關鍵時刻（文字中插入的時刻）' : '文字記錄'}</h3><table class="rt notes"><tbody>${list.map((n) => `<tr><td class="t">${when(n)}</td><td>${txt(n)}</td></tr>`).join('')}</tbody></table>
-      ${keys.length && all.length > keys.length ? `<p class="rnote">其餘 ${all.length - keys.length} 則文字記錄請見結果頁或 Excel。</p>` : ''}</div>`;
+      ${keys.length && all.length > keys.length ? `<p class="rnote">其餘 ${all.length - keys.length} 則文字記錄請見結果頁或匯出的試算表。</p>` : ''}</div>`;
   }
   if (s.mode === 'ITC') {
     const st = itcStats(s);

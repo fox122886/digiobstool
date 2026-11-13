@@ -1,7 +1,7 @@
 // Google 雲端硬碟同步：只用 drive.file 權限，APP 只看得到自己建立的檔案
 // 全程在瀏覽器完成，記錄不經過任何其他伺服器
 import { store } from './store.js';
-import { xlsxBlob, jsonBlob, names } from './output.js';
+import { sheetBlob, jsonBlob, names } from './output.js';
 import { displayTitle } from './model.js';
 
 export const CLIENT_ID = '515879782369-vlgbvjmlet2itbt2c81ki348fb4hb2kt.apps.googleusercontent.com';
@@ -157,13 +157,13 @@ export const needsSync = (s) => !s.sample && s.status === 'ended' && (!s.drive?.
 export async function syncSession(s) {
   const folder = await ensureFolder();
   const n = names(s);
-  const base = n.xlsx.replace(/\.xlsx$/, '');
+  const base = n.ods.replace(/\.ods$/, '');
   const desc = `${displayTitle(s)}｜${s.meta.date || ''}｜數位觀課工具 ${s.mode}`;
   const prev = s.drive || {};
   const drive = { ...prev };
 
-  // 試算表：上傳 xlsx 並轉成 Google 試算表；內容變更時換一份新的，舊的移到垃圾桶
-  const sheet = await create({ name: base, parents: [folder.id], mimeType: 'application/vnd.google-apps.spreadsheet', description: desc }, xlsxBlob(s));
+  // 試算表：上傳 ods 並轉成 Google 試算表；內容變更時換一份新的，舊的移到垃圾桶
+  const sheet = await create({ name: base, parents: [folder.id], mimeType: 'application/vnd.google-apps.spreadsheet', description: desc }, sheetBlob(s));
   if (prev.sheetId && prev.sheetId !== sheet.id) await trash(prev.sheetId);
   drive.sheetId = sheet.id;
   drive.sheetUrl = sheet.webViewLink || `https://docs.google.com/spreadsheets/d/${sheet.id}/edit`;

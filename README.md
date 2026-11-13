@@ -1,4 +1,4 @@
-# 數位觀課工具 2.0（UTC／ATC／DTC／ITC）
+# 數位觀課工具 2.0（UTC／ATC／DTC／ITC／PTC）
 
 國立臺灣師範大學師資培育學院 張民杰教授團隊的數位觀課工具改版。
 可離線使用的網頁 APP（PWA），每個動作即時存在使用者的裝置上。
@@ -6,6 +6,7 @@
 - **開始使用**：<https://fox122886.github.io/digiobstool/>
 - **操作指引**：<https://fox122886.github.io/digiobstool/guide.html>
 - **隱私權政策**：<https://fox122886.github.io/digiobstool/privacy.html>
+- **資安說明**：[SECURITY.md](SECURITY.md)
 
 手機可在瀏覽器選單選「加到主畫面」（iPhone 為 Safari「分享 → 加入主畫面」），安裝後可離線開啟。
 
@@ -15,6 +16,9 @@
 - **ATC 軼事記錄時間線標記**：開始打字即記下開始時間，送出時記下送出時間。
 - **DTC 質量雙元時間線標記**：UTC 按鈕與 ATC 文字並用；匯出時標出每則文字撰寫期間進行中的代碼。
 - **ITC 間隔時間線標記**：時間抽樣（「在工作中」觀察），可選輪播或座位表（含空位、觀察順序、缺席自動跳過），間隔可手動或自動倒數 3–30 秒，可選「先看後記」與提示音；可同時標記教學活動。結果有各輪分布、在工作中率走勢、依活動統計、座位熱區與可修改的對象 × 輪表。
+- **PTC 教師移動（雛形）**：自訂教室座位與區域，點選記錄教師（與學生）移動路線；有區域、組別統計與量化分析表，可匯出路線動畫（MP4／GIF）。
+
+結果頁另有「觀課重點」卡片與一頁可列印的「觀課重點摘要」；ATC／DTC 記錄中插入的時刻 `[HH:MM:SS]` 會當作關鍵時刻標記。
 
 鍵盤操作（電腦）：數字鍵 1–0 對應代碼按鈕；打字時用 Alt + 數字鍵；Enter 送出文字、Shift + Enter 換行、Ctrl + ; 插入現在時刻。ITC 用數字鍵選類別、Enter 記錄並換下一位。
 
@@ -28,15 +32,19 @@ manifest.webmanifest   安裝到主畫面用的設定
 sw.js                  離線快取（改版時要更新裡面的 VERSION）
 js/app.js              畫面與操作
 js/model.js            資料模型、計時、統計（純函式）
-js/output.js           時間軸圖、Excel／PNG／JSON 匯出
+js/output.js           時間軸圖、試算表（ODS）／PNG／JSON 匯出
+js/ods.js              自製 OpenDocument 試算表產生器（不依賴第三方元件）
+js/brief.js            觀課重點卡片與一頁摘要
+js/ptc.js、js/ptcmodel.js PTC 教師移動的畫面與資料模型
 js/store.js            IndexedDB 本機資料庫
 js/itc.js              ITC 時間抽樣的記錄與結果畫面
 js/analytics.js        使用統計事件（GA4）
-utc/ atc/ dtc/ itc/    各工具入口頁（由 tools/make_tool_pages.py 從 index.html 產生）
-tools/                 產生入口頁的腳本與 GA4 程式片段
+utc/ atc/ dtc/ itc/ ptc/ 各工具入口頁（由 tools/make_tool_pages.py 從 index.html 產生）
+tools/                 產生入口頁的腳本、GA4 程式片段、資安自我檢查腳本
+theme.js               淺色／深色切換
+ga.js、guide.js        GA4 載入與指引頁統計（獨立檔案，配合 CSP 不使用行內程式）
 js/gdrive.js           Google 雲端硬碟同步（drive.file 權限）
 privacy.html           隱私權政策
-vendor/xlsx.full.min.js SheetJS 0.18.5（Apache 2.0）
 vendor/gifenc.esm.js   gifenc 1.0.3（MIT），PTC 路線動畫 GIF 編碼
 vendor/mp4-muxer.mjs   mp4-muxer 5.1.3（MIT），PTC 路線動畫 MP4 封裝
 js/anim.js             PTC 路線動畫（WebCodecs H.264；不支援時改用 MediaRecorder）
@@ -66,7 +74,7 @@ python -m http.server 8000
 
 - 使用 Google Identity Services 在瀏覽器取得權杖，權限只有 `drive.file`，APP 只能存取自己建立的檔案。
 - OAuth 用戶端 ID 寫在 `js/gdrive.js` 的 `CLIENT_ID`；已授權的 JavaScript 來源需包含部署網域。
-- 每場觀課存成一份 Google 試算表與一份 JSON，放在使用者雲端硬碟的「數位觀課記錄」資料夾。
+- 每場觀課存成一份 Google 試算表（上傳 .ods 由雲端硬碟轉檔）與一份 JSON，放在使用者雲端硬碟的「數位觀課記錄」資料夾。
 - 換網域或移轉 Google Cloud 專案時，更新 `CLIENT_ID` 與 `ALLOWED_HOSTS` 即可。
 
 ## 資料格式
@@ -87,11 +95,11 @@ python -m http.server 8000
 
 本工具改寫自 Miikka Turkkila 的 [LOBS（Lesson OBServation app）](https://github.com/MTurkkila/LOBS)，
 依原作授權以 [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hant) 釋出。
-SheetJS 依其 Apache 2.0 授權隨附；gifenc（Matt DesLauriers）與 mp4-muxer（Vanilagy）依其 MIT 授權隨附。
+gifenc（Matt DesLauriers）與 mp4-muxer（Vanilagy）依其 MIT 授權隨附。
 
 ## 使用統計（Google Analytics G-T79F3ZXDMG）
 
-GA4 只在 `fox122886.github.io` 與 `web.ntnu.edu.tw` 載入（`tools/ga-snippet.html`，已放進各頁 `<head>`）；其他網址（本機、預覽）不會送出。
+GA4 只在 `fox122886.github.io` 與 `web.ntnu.edu.tw` 載入（`ga.js`，各頁 `<head>` 以外部檔案引用）；其他網址（本機、預覽）不會送出。
 要在 GA4 報表依工具分開看，請到「管理 → 自訂定義」把 `tool`、`entry`、`format`、`guide_section` 等參數建成事件範圍的自訂維度。
 所有事件都帶 `entry`（`home` 或 `utc`／`atc`／`dtc`／`itc`，表示從哪個入口進來），不含任何觀課內容。
 
@@ -100,7 +108,7 @@ GA4 只在 `fox122886.github.io` 與 `web.ntnu.edu.tw` 載入（`tools/ga-snippe
 | `obs_setup` | 進入設定頁 | `tool` |
 | `obs_start` | 按「開始計時」 | `tool`、`code_count`；ITC 另有 `itc_layout`、`itc_n`、`itc_interval`、`itc_rec`、`itc_acts` |
 | `obs_end` | 結束觀課 | `tool`、`obs_minutes`、`item_count` |
-| `obs_export` | 匯出檔案 | `tool`、`format`（xlsx／png／json）、`sample` |
+| `obs_export` | 匯出檔案 | `tool`、`format`（ods／png／json／mp4／gif）、`sample` |
 | `obs_sample` | 看範例結果 | `tool` |
 | `drive_sync` | 存到雲端硬碟成功 | `tool` |
 | `backup_all`／`backup_import` | 匯出全部備份／匯入備份 | `session_count` |

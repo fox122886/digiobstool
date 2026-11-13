@@ -286,7 +286,7 @@ export function mapSVG(s, width, colors, opts = {}) {
   return p.join('');
 }
 
-// ---------- Excel ----------
+// ---------- 試算表 ----------
 const ck = (v) => (v ? '☑' : '☐');
 export function ptcInfoRows(s) {
   const st = ptcStats(s);

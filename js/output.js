@@ -1,7 +1,9 @@
-// 時間軸圖與匯出（xlsx／png／json）
+// 時間軸圖與匯出（ods／png／json）
 import { MODES, segments, stats, notes, totalSec, fmt, fmtHMS, fileBase, displayTitle, clockTime, APP_VERSION, wallTime, clockHMS,
   itcStats, objName, objShort, hasRate, isSeat, actColor, taskOf, ITC_TASKS, noteStamps, isBareMark } from './model.js';
 import { mapSVG, ptcSheets, ptcInfoRows } from './ptcmodel.js';
+import * as ODS from './ods.js';
+const { odsBlob } = ODS;
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -134,7 +136,7 @@ export async function timelinePNG(s) {
   return new Promise((res, rej) => canvas.toBlob((b) => (b ? res(b) : rej(new Error('圖片產生失敗'))), 'image/png'));
 }
 
-// ---------- XLSX ----------
+// ---------- 試算表（OpenDocument .ods，自製產生器，不用第三方元件） ----------
 function sheet(XLSX, rows, widths) {
   const ws = XLSX.utils.aoa_to_sheet(rows);
   if (widths) ws['!cols'] = widths.map((w) => ({ wch: w }));
@@ -142,8 +144,7 @@ function sheet(XLSX, rows, widths) {
 }
 
 export function workbook(s) {
-  const XLSX = window.XLSX;
-  if (!XLSX) throw new Error('試算表元件尚未載入');
+  const XLSX = ODS;
   const wb = XLSX.utils.book_new();
   const m = s.meta;
   const total = totalSec(s);
@@ -230,9 +231,8 @@ export function workbook(s) {
   return wb;
 }
 
-export function xlsxBlob(s) {
-  const out = window.XLSX.write(workbook(s), { bookType: 'xlsx', type: 'array' });
-  return new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+export function sheetBlob(s) {
+  return odsBlob(workbook(s));
 }
 
 export function jsonBlob(data) {
@@ -241,7 +241,7 @@ export function jsonBlob(data) {
 
 export const names = (s) => {
   const b = fileBase(s);
-  return { xlsx: `${b}.xlsx`, png: `${b}_timeline.png`, json: `${b}.json`, mp4: `${b}_replay.mp4`, webm: `${b}_replay.webm`, gif: `${b}_replay.gif` };
+  return { ods: `${b}.ods`, png: `${b}_timeline.png`, json: `${b}.json`, mp4: `${b}_replay.mp4`, webm: `${b}_replay.webm`, gif: `${b}_replay.gif` };
 };
 
 // ================= ITC =================

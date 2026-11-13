@@ -1,15 +1,15 @@
 // 離線快取：改版時更新 VERSION，使用者下次開啟就會自動換成新版
-const VERSION = 'obs-2.0.0-alpha-21';
+const VERSION = 'obs-2.0.0-alpha-22';
 const FILES = [
   './', './index.html', './app.css', './theme.js', './manifest.webmanifest',
   './utc/', './atc/', './dtc/', './itc/', './ptc/',
   './js/app.js', './js/analytics.js', './js/model.js', './js/output.js', './js/store.js', './js/gdrive.js', './js/itc.js', './js/ptc.js', './js/ptcmodel.js',
-  './vendor/xlsx.full.min.js', './vendor/gifenc.esm.js', './vendor/mp4-muxer.mjs', './js/anim.js', './js/brief.js',
+  './js/ods.js', './ga.js', './guide.js', './vendor/gifenc.esm.js', './vendor/mp4-muxer.mjs', './js/anim.js', './js/brief.js',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png',
   './guide.html', './privacy.html',
   './guide/img/01-home.webp', './guide/img/02-utc-setup.webp', './guide/img/03-utc-record.webp',
   './guide/img/04-atc-record.webp', './guide/img/05-dtc-typing.webp', './guide/img/06-dtc-desktop.webp',
-  './guide/img/08-result-timeline.webp', './guide/img/09-result-stats.webp', './guide/img/10-export.webp',
+  './guide/img/08-result-timeline.webp', './guide/img/09-result-stats.webp', './guide/img/10-export.webp', './guide/img/16-ptc-result.webp',
   './guide/img/11-itc-record.webp', './guide/img/12-itc-result.webp',
   './guide/img/13-itc-seat-setup.webp', './guide/img/14-itc-sampling.webp', './guide/img/15-itc-activity-heat.webp',
 ];
